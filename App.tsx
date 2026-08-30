@@ -19,6 +19,8 @@ import { useProcessingTimer } from "./hooks/useProcessingTimer";
 import { useDigitization } from './hooks/useDigitization';
 import { ModelType, LayoutMode, MultiFileMode } from './types';
 import { generateHtmlDocument } from './utils/exportHtml';
+import { generateSimplifiedHtmlDocument } from './utils/exportSimplifiedHtml';
+const ExportFormatModal = React.lazy(() => import('./components/ExportFormatModal'));
 
 const App: React.FC = () => {
   const { sessionRequestCount, dailyRequestCount, incrementUsage } = useUsageTracking();
@@ -98,7 +100,12 @@ const App: React.FC = () => {
     }
   };
 
-  const executeDownload = (combine: boolean, customDocTitle?: string) => {
+  const executeDownload = (
+    combine: boolean, 
+    flavor: 'full' | 'simplified' = 'full', 
+    stripAnnotations: boolean = false, 
+    customDocTitle?: string
+  ) => {
     if (!originalFiles || originalFiles.length === 0) return;
 
     if (combine || originalFiles.length === 1) {
@@ -109,21 +116,25 @@ const App: React.FC = () => {
       // Use the actual uploaded file's complete name (with extension) for the relative link
       const exactOriginalFileName = originalFiles[0]?.name || '';
       
-      const template = generateHtmlDocument(
-        state.results, 
-        exactOriginalFileName, 
-        layoutMode,
-        isReadingMode,
-        highContrastTheme,
-        textSize,
-        fontPreference,
-        lineHeight
-      );
+      const template = flavor === 'simplified'
+        ? generateSimplifiedHtmlDocument(state.results, layoutMode, stripAnnotations)
+        : generateHtmlDocument(
+            state.results, 
+            exactOriginalFileName, 
+            layoutMode,
+            isReadingMode,
+            highContrastTheme,
+            textSize,
+            fontPreference,
+            lineHeight
+          );
       const blob = new Blob([template], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${finalBaseName}-acc.html`;
+      link.download = flavor === 'simplified' 
+        ? `${finalBaseName}-clean.html`
+        : `${finalBaseName}-acc.html`;
       link.click();
       URL.revokeObjectURL(url);
     } else {
@@ -139,21 +150,25 @@ const App: React.FC = () => {
 
         const originalFileName = originalFiles[i].name;
         const baseFileName = originalFileName.replace(/\.[^/.]+$/, "") || `math_notes_${Date.now()}_${i + 1}`;
-        const template = generateHtmlDocument(
-          fileResults, 
-          originalFileName, 
-          layoutMode,
-          isReadingMode,
-          highContrastTheme,
-          textSize,
-          fontPreference,
-          lineHeight
-        );
+        const template = flavor === 'simplified'
+          ? generateSimplifiedHtmlDocument(fileResults, layoutMode, stripAnnotations)
+          : generateHtmlDocument(
+              fileResults, 
+              originalFileName, 
+              layoutMode,
+              isReadingMode,
+              highContrastTheme,
+              textSize,
+              fontPreference,
+              lineHeight
+            );
         const blob = new Blob([template], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${baseFileName}-acc.html`;
+        link.download = flavor === 'simplified'
+          ? `${baseFileName}-clean.html`
+          : `${baseFileName}-acc.html`;
         
         // Stagger the downloads slightly to help the browser process multiple files
         setTimeout(() => {
@@ -167,13 +182,8 @@ const App: React.FC = () => {
 
   const handleDownloadHtml = () => {
     if (!originalFiles || originalFiles.length === 0) return;
-
-    if (originalFiles.length > 1) {
-      // Show export choice and title prompt dialog for multi-file batches
-      setShowExportModal(true);
-    } else {
-      executeDownload(true);
-    }
+    // Always open the export modal so user can choose between Full Interactive and Simplified HTML
+    setShowExportModal(true);
   };
 
   const themeBgClass = {
@@ -255,10 +265,10 @@ const App: React.FC = () => {
 
       {showExportModal && originalFiles && originalFiles.length > 0 && (
         <Suspense fallback={null}>
-          <ExportDialogModal
+          <ExportFormatModal
             isOpen={showExportModal}
             onClose={() => setShowExportModal(false)}
-            onConfirm={(combine, customTitle) => executeDownload(combine, customTitle)}
+            onConfirm={(combine, flavor, stripNotes, customTitle) => executeDownload(combine, flavor, stripNotes, customTitle)}
             defaultTitle={originalFiles[0].name.replace(/\.[^/.]+$/, "")}
             totalFiles={originalFiles.length}
             totalPages={state.results.length}
