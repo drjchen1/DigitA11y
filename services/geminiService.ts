@@ -1,0 +1,432 @@
+
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
+import { GeminiPageResponse, BatchResponse, ModelType } from "../types";
+import beautify from "js-beautify";
+
+const getSystemInstruction = () => {
+  return `
+You are a world-class specialist in mathematics education and web accessibility (WCAG 2.2 AA). 
+Your task is to convert scanned handwritten mathematics lecture notes into a high-fidelity, accessible HTML document.
+
+Rules:
+1. FAITHFULNESS & ADAPTIVE LAYOUT: Transcribe the author's original wording and shorthand as faithfully as possible. Do not rewrite, heavily rephrase, or expand shorthand into full sentences unless fixing an obvious typo. However, you MAY adapt the spatial layout and formatting to enhance web clarity and accessibility.
+    - If text and a figure appear side-by-side in the notes, use Tailwind grid classes (e.g., <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">) to replicate this layout.
+    - If an equation and an annotation (text with an arrow) appear side-by-side, you may preserve the spatial relationship using a flexbox container OR convert the annotation into a clear text note immediately below the equation if it improves readability on a screen.
+
+2. ACCESSIBILITY: Use semantic HTML5 elements (<article>, <section>, <h1>-<h6>, <p>, <ul>, <ol>, <dl>). 
+    - HEADING HIERARCHY (CRITICAL A11Y): You are FORBIDDEN from skipping heading levels. The first page MUST have an <h1> for the main title. Subsequent pages may start with <h2> or <h3> if they logically continue a previous section. NEVER jump from <h1> to <h3>. Do not use headings purely for visual sizing.
+    - COLOR CONTRAST (STRICT): You are FORBIDDEN from using light gray text colors (e.g., text-slate-300, text-gray-300). Use high-contrast text colors to ensure WCAG 2.2 AA compliance. 
+      - APPROVED COLORS: For emphasis, you MAY use high-contrast Tailwind classes: 'text-slate-900', 'text-blue-900', 'text-red-900', 'text-emerald-900', 'text-indigo-900'.
+
+3. UNIVERSAL DESIGN & AESTHETICS (BEAUTIFUL & ACCESSIBLE):
+   - TYPOGRAPHY: Use 'font-sans' for a clean, readable look. For headings, use 'font-black tracking-tight text-slate-900'.
+   - SPACING: Use standard Tailwind spacing (e.g., 'space-y-4', 'mb-6', 'mt-8') to group related concepts logically, matching the visual flow of the original page.
+   - VISUAL HIERARCHY: Use 'italic text-slate-700 my-8' for important theorems or definitions. Do NOT use any left borders or gold colors here; reserve the gold bar exclusively for the '<div class="notebox">' used for explicitly boxed notes.
+   - LISTS: Use 'list-disc list-outside ml-6 space-y-2 mb-6' for unordered lists to ensure proper text wrapping and readability.
+   - NOTEPADS/BOXES: For boxed annotations or key formulas, use '<div class="notebox" role="region" aria-label="Key Formula">'. NEVER use green backgrounds or borders.
+   - AUTO-ANNOTATIONS: You MUST proactively and FREQUENTLY generate helpful annotations, concept explanations, or step-by-step breakdowns for students. Wrap these annotations in '<div class="auto-annotation">...</div>'. Place them logically near the relevant content. They will be hidden by default and toggled by the user to aid their learning.
+
+4. NATIVE MATHEMATICS & EQUATION STRUCTURE (CRITICAL):
+   - Convert all mathematical expressions into standard LaTeX. 
+   - PREFER INLINE MATH: Use \\( ... \\) for variables, short expressions, or any math that is part of a sentence to maintain a natural, cohesive flow.
+   - BLOCK MATH: Use '\\[ ... \\]' for standalone block math. 
+   - MULTI-LINE DERIVATIONS & ALIGNMENT: For multi-step derivations, systems of equations, or aligned proofs, use LaTeX alignment environments inside block math:
+     - '\\begin{aligned} ... \\end{aligned}' with '&' alignment anchors and '\\\\' line breaks.
+     - Piecewise formulas and case definitions: '\\begin{cases} ... \\end{cases}'.
+     - Matrices and vectors: '\\begin{pmatrix} ... \\end{pmatrix}' or '\\begin{bmatrix} ... \\end{bmatrix}' or determinants '\\begin{vmatrix} ... \\end{vmatrix}'.
+   - UNDERBRACES, OVERBRACES & MATH ANNOTATIONS (CRITICAL):
+     - Use \\underbrace{expression}_{\text{label}} (or \\overbrace{expression}^{\text{label}}) to represent curly brackets under or over math expressions.
+     - NEVER use \\mathclap or \\clap on underbrace labels when multiple terms have underbraces, as it zeroes out label width and causes severe horizontal text overlapping and collisions. Standard \\underbrace naturally calculates horizontal bounding width to keep labels distinct and legible.
+     - MULTI-LINE ANNOTATIONS: For multi-line annotations or longer notes under a single term, use \\substack with \\text{...} on each line: \\underbrace{k}_{\\substack{\\text{constant of proportionality} \\\\ \\text{(\"is proportional to\")}}}.
+     - FOR ALL WORDS IN MATH / BRACES: ALWAYS wrap English words inside \\text{...} (e.g., \\underbrace{(y')}_{\\text{coeff. } y' \\text{ contains } y'}} or \\underbrace{\\sin y}_{\\text{this makes the eq. nonlinear}}).
+     - NEVER place plain English words directly into math mode without \\text{...} (e.g., NEVER write $is proportional to$; write definitions like 'k: Constant of proportionality ("is proportional to")' in regular HTML text, or wrap words inside \\text{...} if in math).
+     - TIGHT, NATURAL OPERATOR SPACING: Maintain compact, natural mathematical spacing between terms and operators (e.g., y'' + \\underbrace{(y')}_{\\text{coeff. } y' \\text{ contains } y'}} y' + y = 0 or y'' + \\underbrace{\\sin y}_{\\text{this makes the eq. nonlinear}} = 0) without inserting artificial \\quad, \\qquad, or wide gaps between words.
+   - Ensure backslashes are present for all functions (e.g., \\sin, \\cos, \\log, \\ln, \\sqrt, \\int, \\sum, \\lim, \\times, \\partial).
+   - Double check that delimiters (\\( \\), \\[ \\]) and brackets are fully closed.
+
+5. NATIVE TABULAR DATA EXTRACTION (ACCESSIBILITY & WCAG 1.3.1):
+   - Automatically detect grids, data tables, parameter values, truth tables, and matrix tables in the images.
+   - Convert these structures into semantic, accessible HTML <table> elements inside a responsive container:
+     <div class="overflow-x-auto my-6" role="region" aria-label="Data Table" tabindex="0">
+       <table class="w-full text-left border-collapse my-2 border border-slate-300 bg-white rounded-xl overflow-hidden">
+         <caption class="sr-only">Descriptive table summary</caption>
+         <thead>
+           <tr>
+             <th scope="col" class="bg-slate-100 text-slate-900 font-bold p-3 border-b border-slate-300 text-xs uppercase tracking-wider">Header 1</th>
+             <th scope="col" class="bg-slate-100 text-slate-900 font-bold p-3 border-b border-slate-300 text-xs uppercase tracking-wider">Header 2</th>
+           </tr>
+         </thead>
+         <tbody>
+           <tr>
+             <th scope="row" class="font-bold text-slate-900 p-3 border-b border-slate-200 text-xs">Row Label</th>
+             <td class="p-3 border-b border-slate-200 text-sm text-slate-800">Value</td>
+           </tr>
+         </tbody>
+       </table>
+     </div>
+   - You MUST use correct semantic table tags (<table>, <thead>, <tbody>, <tr>, <th> with scope="col" or scope="row", <td>).
+   - Do NOT capture tables as image figures.
+
+6. DISTINGUISH ANNOTATIONS VS. FIGURES (STRICT ENFORCEMENT):
+   - ANNOTATIONS (NOT FIGURES): Hand-drawn circles around text, arrows pointing to variables, large curly brackets used for grouping, and labels in boxes (e.g., "Option 2", "Important!") are NOT FIGURES.
+     - Transcribe the text/math inside or pointed to by these markers as standard HTML. 
+     - Use <div class="notebox"> for boxed items.
+     - IGNORE the visual circle/arrow itself if it serves only to highlight text; focus on the text content.
+   - ACTUAL FIGURES: Only capture visual representations as figures if they represent:
+     - Coordinate systems/graphs with axes and curves.
+     - Geometric shapes (circles, triangles, etc.) that are part of a problem, not just highlights.
+     - Physics diagrams or complex flowcharts.
+
+7. GRAPHS & DIAGRAMS (FIGURES ONLY):
+   - Identify every actual drawing (axes, curves, sketches).
+   - Determine its exact bounding box in [ymin, xmin, ymax, xmax] format (normalized 0-1000).
+   - Generate a highly accessible, short, and concise alt text description for screen readers (e.g. "Figure: coordinate graph showing exponential curve \\( y = x^2 \\)"). Limit it to a single sentence or a few words.
+   - Generate a detailed, highly descriptive visible caption that comprehensively describes the axes, curves, equations, variables, and mathematical relationships in detail so anyone can fully understand it.
+   - MATHEMATICAL DELIMITERS (CRITICAL): In BOTH "alt" and "caption", wrap EVERY SINGLE mathematical variable, equation, exponent (e.g. \( x^2 \), \( e^{-2t} \)), fraction (e.g. \( \frac{5}{2} \)), derivative (e.g. \( y' = ay + b \)), compound inequality (e.g. \( -1 < t < 0 \), \( 0 < t < 1 \)), interval / set relation (e.g. \( x \in [-\pi, \pi] \), \( u \in [-L, L] \)), function (e.g. \( f(t) \)), parameter (e.g. \( T = 2 \), \( L = 1 \)), limit / arrow (e.g. \( t \to 0^- \), \( t \to 0^+ \)), and variable name (e.g. \( t \), \( x \), \( u \)) in LaTeX \( ... \) delimiters so they are rendered as mathematical formulas by MathJax. Never leave raw LaTeX commands like \in, \to, \pi un-delimited.
+   - In the HTML, place ONLY the standalone image tag with a matching ID: <img id="fig_ID" alt="[CONCISE DESCRIPTION]">.
+   - NEVER wrap <img id="fig_ID"> inside a <div class="notebox">, <div class="card">, or border container. Figures must always be standalone top-level block elements.
+   - CRITICAL: Do NOT write separate caption paragraphs (e.g. <p>Figure 1: ...</p> or <figcaption>) in the HTML body for figures. The application automatically constructs the figure card with its accessible caption and interactive details from the figures array.
+
+8. STRUCTURED OUTPUT FORMAT: Return a structured JSON object containing:
+   {
+     "pages": [
+       {
+         "title": "Short descriptive page or topic title",
+         "html": "The full semantic HTML string",
+         "figures": [
+           { "id": "fig_1", "box_2d": [ymin, xmin, ymax, xmax], "alt": "Short concise title", "caption": "Detailed visual description" }
+         ],
+         "semanticTags": {
+           "pageTitle": "Topic title",
+           "headingsCount": 2,
+           "mathExpressionsCount": 8,
+           "tablesCount": 1,
+           "figuresCount": 1,
+           "hasAriaLandmarks": true,
+           "hasAccessibleTables": true,
+           "hasFormulasEnriched": true
+         }
+       }
+     ]
+   }
+
+CRITICAL: Return ONLY the JSON object.
+`;
+};
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.7-flash', thinkingLevelStr: string = 'LOW', retries = 3, onModelFallback?: (fallbackModel: ModelType) => void): Promise<{text: string, tokenCount: number, actualModel: ModelType}> {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const isThinkingSupported = model.includes('pro') || model.includes('3.7-flash');
+
+      let currentThinkingLevel: ThinkingLevel | undefined;
+      
+      // If none is specified, or model doesn't support thinkingConfig, leave it undefined
+      if (thinkingLevelStr === 'NONE' || !isThinkingSupported) {
+        currentThinkingLevel = undefined;
+      } else if (thinkingLevelStr === 'HIGH' || i > 0) { // Bump to HIGH on retry if it was LOW
+        currentThinkingLevel = ThinkingLevel.HIGH;
+      } else if (thinkingLevelStr === 'AUTO') {
+        // Adaptive thinking: Allocate high reasoning headroom for complex math and dynamic calibration
+        currentThinkingLevel = ThinkingLevel.HIGH;
+      } else {
+        currentThinkingLevel = ThinkingLevel.LOW;
+      }
+
+      const parts = images.flatMap(img => [
+        { inlineData: { mimeType: 'image/jpeg', data: img.base64 } },
+        { text: `This is page ${img.pageNumber}.` }
+      ]);
+
+      const adaptivePrompt = thinkingLevelStr === 'AUTO' 
+        ? `\nADAPTIVE REASONING: Dynamically calibrate your thinking depth per page. For simple notes or text headings, execute rapidly. For pages with dense math derivations, piecewise functions, matrices, or complex tables, utilize deep multi-step verification to guarantee 100% LaTeX syntax correctness and accessibility compliance.`
+        : '';
+
+      parts.push({ text: `Analyze these ${images.length} pages in order. 
+      CRITICAL: Extract all mathematical equations using native LaTeX environments (e.g. aligned, cases, pmatrix). Extract all tables as semantic accessible HTML <table> structures.
+      Hand-drawn or printed circles, arrows, and grouping brackets are annotations, NOT figures. 
+      Labels like "Option 2" in boxes are text content and must be transcribed directly into HTML. 
+      Only extract coordinate graphs or scientific drawings as figures. 
+      Return a JSON object with a 'pages' property containing exactly ${images.length} page results in the same order as provided.
+      Ensure the output is complete and does not cut off.${adaptivePrompt}` });
+
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: { parts },
+        config: {
+          systemInstruction: getSystemInstruction() + "\nIMPORTANT: Return a JSON object with a 'pages' property containing an array of page results. Each page result must have 'title', 'html', 'figures', and 'semanticTags' properties.",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              pages: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    html: { type: Type.STRING },
+                    figures: {
+                      type: Type.ARRAY,
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          id: { type: Type.STRING },
+                          box_2d: { 
+                            type: Type.ARRAY, 
+                            items: { type: Type.NUMBER },
+                            minItems: 4,
+                            maxItems: 4
+                          },
+                          alt: { type: Type.STRING },
+                          caption: { type: Type.STRING }
+                        },
+                        required: ["id", "box_2d", "alt", "caption"]
+                      }
+                    },
+                    semanticTags: {
+                      type: Type.OBJECT,
+                      properties: {
+                        pageTitle: { type: Type.STRING },
+                        headingsCount: { type: Type.INTEGER },
+                        mathExpressionsCount: { type: Type.INTEGER },
+                        tablesCount: { type: Type.INTEGER },
+                        figuresCount: { type: Type.INTEGER },
+                        hasAriaLandmarks: { type: Type.BOOLEAN },
+                        hasAccessibleTables: { type: Type.BOOLEAN },
+                        hasFormulasEnriched: { type: Type.BOOLEAN }
+                      },
+                      required: ["headingsCount", "mathExpressionsCount", "tablesCount", "figuresCount", "hasAriaLandmarks", "hasAccessibleTables", "hasFormulasEnriched"]
+                    }
+                  },
+                  required: ["html", "figures"]
+                }
+              }
+            },
+            required: ["pages"]
+          },
+          temperature: 0.1,
+          maxOutputTokens: 65536,
+          ...(currentThinkingLevel ? { thinkingConfig: { thinkingLevel: currentThinkingLevel } } : {})
+        }
+      });
+
+      if (!response.text) throw new Error("Empty response from Gemini");
+      
+      let cleanJson = response.text.trim();
+      if (cleanJson.startsWith('```')) {
+        cleanJson = cleanJson.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      }
+      
+      return { text: cleanJson, tokenCount: response.usageMetadata?.totalTokenCount || 0, actualModel: model };
+    } catch (error: any) {
+      const isRateLimit = error.message?.includes('429') || error.message?.toLowerCase().includes('rate limit');
+      
+      if (isRateLimit && i < retries - 1) {
+        const waitTime = Math.pow(2, i + 1) * 1000;
+        console.warn(`Rate limit hit on batch. Retrying in ${waitTime}ms...`);
+        await sleep(waitTime);
+        continue;
+      }
+      // If we used gemini-3.7-flash or gemini-3.1-pro-preview, let's try fallback to gemini-3.5-flash!
+      if (model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+        console.warn(`Attempting fallback to gemini-3.5-flash due to error with ${model}:`, error);
+        if (onModelFallback) onModelFallback('gemini-3.5-flash' as any);
+        return callBatchGeminiWithRetry(images, 'gemini-3.5-flash' as any, thinkingLevelStr, retries, onModelFallback);
+      }
+      throw error;
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
+
+export const convertBatchToHtml = async (images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.7-flash', thinkingLevelStr: string = 'LOW', onModelFallback?: (fallbackModel: ModelType) => void): Promise<BatchResponse> => {
+  let result = { text: "", tokenCount: 0, actualModel: model };
+  try {
+    result = await callBatchGeminiWithRetry(images, model, thinkingLevelStr, 3, onModelFallback);
+    const parsed = JSON.parse(result.text);
+    
+    if (parsed.pages) {
+      parsed.pages = parsed.pages.map((page: any) => {
+        if (page.html) {
+          page.html = beautify.html(page.html, {
+            indent_size: 2,
+            wrap_line_length: 120,
+            preserve_newlines: true
+          });
+        }
+        return page;
+      });
+    }
+
+    return { pages: parsed.pages as GeminiPageResponse[], tokenCount: result.tokenCount, actualModelUsed: result.actualModel };
+  } catch (error: any) {
+    console.error('Gemini Batch API Error:', error);
+    throw new Error(`Failed to process batch: ${error.message}`);
+  }
+};
+
+export const fixTextFormatting = async (text: string, model: ModelType = 'gemini-3.7-flash'): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: {
+        parts: [
+          { text: `Fix the formatting of the following extracted text/HTML from a mathematical document. 
+          
+          RULES:
+          1. If it contains math, format it properly as LaTeX (use \\( ... \\) for inline and \\[ ... \\] for block math).
+          2. Fix any obvious OCR errors, garbled text, or broken HTML tags.
+          3. Maintain the original meaning and structure.
+          4. If you see any <mjx-container> or <math> tags in the HTML, convert them back to raw LaTeX delimiters (\\( ... \\) or \\[ ... \\]).
+          5. Return ONLY the corrected HTML/text. Do not include markdown code blocks like \`\`\`html.
+          
+          TEXT TO FIX:
+          ${text}` }
+        ]
+      },
+      config: {
+        temperature: 0.1,
+        ...((model.includes('pro') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
+      }
+    });
+
+    let result = response.text?.trim() || "";
+    if (!result) {
+      throw new Error("Empty response from Gemini");
+    }
+    if (result.startsWith('```html')) {
+      result = result.replace(/^```html\n?/, '').replace(/\n?```$/, '');
+    } else if (result.startsWith('```')) {
+      result = result.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    }
+    return beautify.html(result, {
+      indent_size: 2,
+      wrap_line_length: 120,
+      preserve_newlines: true
+    });
+  } catch (error: any) {
+    console.error('Fix text error:', error);
+    if (model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+      console.warn(`Retrying fixTextFormatting with gemini-3.5-flash fallback from ${model}`);
+      return fixTextFormatting(text, 'gemini-3.5-flash' as any);
+    }
+    throw error;
+  }
+};
+
+export const autoFixAccessibilityIssue = async (html: string, issueTitle: string, issueDescription: string, issueSuggestion: string, model: ModelType = 'gemini-3.7-flash'): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: {
+        parts: [
+          { text: `You are an expert in Web Accessibility (WCAG 2.2 AA) and semantic HTML.
+          Your task is to fix a specific accessibility issue in the provided HTML.
+          
+          ISSUE TITLE: ${issueTitle}
+          ISSUE DESCRIPTION: ${issueDescription}
+          SUGGESTION: ${issueSuggestion}
+          
+          RULES:
+          1. Apply the suggested fix to the HTML to resolve the accessibility issue.
+          2. Do NOT change anything else in the HTML unless it's necessary for the fix.
+          3. Maintain the original structure, classes, and content as much as possible.
+          4. If you see any <mjx-container> or <math> tags, DO NOT touch them or convert them. Leave them exactly as they are.
+          5. Return ONLY the corrected HTML string. Do not include markdown code blocks like \`\`\`html.
+          
+          HTML TO FIX:
+          ${html}` }
+        ]
+      },
+      config: {
+        temperature: 0.1,
+        ...((model.includes('pro') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
+      }
+    });
+
+    let result = response.text?.trim() || "";
+    if (!result) {
+      throw new Error("Empty response from Gemini");
+    }
+    if (result.startsWith('```html')) {
+      result = result.replace(/^```html\n?/, '').replace(/\n?```$/, '');
+    } else if (result.startsWith('```')) {
+      result = result.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    }
+    return beautify.html(result, {
+      indent_size: 2,
+      wrap_line_length: 120,
+      preserve_newlines: true
+    });
+  } catch (error: any) {
+    console.error('Auto-fix accessibility error:', error);
+    if (model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+      console.warn(`Retrying autoFixAccessibilityIssue with gemini-3.5-flash fallback from ${model}`);
+      return autoFixAccessibilityIssue(html, issueTitle, issueDescription, issueSuggestion, 'gemini-3.5-flash' as any);
+    }
+    throw error;
+  }
+};
+
+export const describeFigure = async (base64Image: string, model: ModelType = 'gemini-3.7-flash'): Promise<{alt: string, caption: string, tokenCount: number}> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: model, // Dynamically use the selected model
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/png', data: base64Image.split(',')[1] || base64Image } },
+          { text: `Generate a highly accessible, short, and concise alt text description (1 sentence or a few words) of this mathematical figure for a blind student, AND a highly detailed, comprehensive visible caption for all users.
+          
+          RULES:
+          1. CONCISENESS FOR ALT: Limit alt text to a very brief description of what the figure is (e.g. "Triangle diagram for geometry problem").
+          2. DETAILS FOR CAPTION: Provide a detailed, step-by-step description in the caption of all math symbols, lines, variables, curves, axes, and values so anyone can fully understand it.
+          3. NO ABRUPT CUTOFFS: Ensure both thoughts are complete, well-formed, and end naturally.
+          4. BEST FIT: Do not assume fixed orientation; describe the logical mathematical content.
+          5. MATHEMATICAL PRECISION (CRITICAL): Ensure that ANY mathematical variables, equations, exponents (e.g. \\( x^2 \\), \\( e^{-2t} \\)), fractions, or LaTeX expressions in BOTH the alt text AND the caption are strictly enclosed within \\( ... \\) for inline math or \\[ ... \\] for block math. Example caption: "Coordinates graph plotting exponential curves \\( y = Ce^x \\) with \\( C > 0 \\) and parabola \\( y = x^2 \\)."
+          6. SPOKEN MATH: Provide a spoken-word equivalent for complex mathematical notation to ensure accessibility for screen readers.
+          
+          Return ONLY a JSON object with 'alt' and 'caption' string properties.` }
+        ]
+      },
+      config: {
+        temperature: 0.2,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            alt: { type: Type.STRING },
+            caption: { type: Type.STRING }
+          },
+          required: ["alt", "caption"]
+        },
+        ...((model.includes('pro') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
+      }
+    });
+
+    const text = response.text?.trim() || "";
+    if (!text) {
+      throw new Error("Empty response from Gemini");
+    }
+    const parsed = JSON.parse(text);
+    return { 
+      alt: parsed.alt || "", 
+      caption: parsed.caption || "", 
+      tokenCount: response.usageMetadata?.totalTokenCount || 0 
+    };
+  } catch (error: any) {
+    console.error('Description error:', error);
+    if (model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+      console.warn(`Retrying describeFigure with gemini-3.5-flash fallback from ${model}`);
+      return describeFigure(base64Image, 'gemini-3.5-flash' as any);
+    }
+    throw error;
+  }
+};

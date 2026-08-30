@@ -1,0 +1,89 @@
+
+export type ModelType = 'gemini-3.7-flash' | 'gemini-3.5-flash' | 'gemini-3.1-flash-lite' | 'gemini-3.1-pro-preview';
+export type LayoutMode = 'paginated' | 'continuous';
+export type ThinkingLevelType = 'AUTO' | 'LOW' | 'HIGH' | 'NONE';
+export type MultiFileMode = 'combine' | 'separate';
+
+export interface Figure {
+  id: string;
+  box_2d: [number, number, number, number]; // [ymin, xmin, ymax, xmax]
+  alt: string;
+  caption: string;
+}
+
+export interface SemanticAccessibilityTags {
+  pageTitle?: string;
+  headingsCount: number;
+  mathExpressionsCount: number;
+  tablesCount: number;
+  figuresCount: number;
+  hasAriaLandmarks: boolean;
+  hasAccessibleTables: boolean;
+  hasFormulasEnriched: boolean;
+}
+
+export interface GeminiPageResponse {
+  html: string;
+  figures: Figure[];
+  title?: string;
+  semanticTags?: SemanticAccessibilityTags;
+}
+
+export interface BatchResponse {
+  pages: GeminiPageResponse[];
+  tokenCount: number;
+  actualModelUsed?: ModelType;
+}
+
+export interface AccessibilityAudit {
+  score: number;
+  checks: {
+    title: string;
+    passed: boolean;
+    description: string;
+    suggestion?: string;
+  }[];
+}
+
+export interface FigureResult {
+  id: string;
+  originalSrc: string;
+  currentSrc: string;
+  alt: string;
+  caption: string;
+}
+
+export interface ConversionResult {
+  html: string;
+  pageNumber: number;
+  title?: string;
+  width: number;
+  height: number;
+  audit?: AccessibilityAudit;
+  figures: FigureResult[];
+  semanticTags?: SemanticAccessibilityTags;
+}
+
+export interface AppState {
+  isProcessing: boolean;
+  progress: number;
+  results: ConversionResult[];
+  error: string | null;
+  statusMessage: string;
+  totalTime?: number;
+  selectedModel: ModelType;
+  selectedThinkingLevel: ThinkingLevelType;
+  currentProcessingImages?: string[] | null;
+  actualModelUsed?: ModelType;
+}
+
+declare global {
+  const __BUILD_DATE__: string;
+  interface Window {
+    MathJax?: {
+      typesetClear: (elements: any[]) => void;
+      typesetPromise: (elements: any[]) => Promise<any>;
+    };
+    pdfjsLib: any;
+  }
+}

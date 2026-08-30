@@ -1,0 +1,100 @@
+
+import React from 'react';
+
+interface HelpModalProps {
+  onClose: () => void;
+}
+
+const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full p-10 relative overflow-hidden">
+        <button 
+          onClick={onClose}
+          className="absolute top-8 right-8 text-zinc-400 hover:text-zinc-600 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <div className="mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-500/20 text-indigo-500 rounded-2xl mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">How to Use <span className="text-zinc-950">Digit</span><span className="text-indigo-500">A11y</span></h2>
+          <p className="text-zinc-500 font-medium">Instructions and tips for the best results.</p>
+        </div>
+
+        <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-4 custom-scrollbar">
+          <section>
+            <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4">Step-by-Step Guide</h3>
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-indigo-500/10 rounded-full flex items-center justify-center text-xs font-black text-indigo-500">01</div>
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">Full-Screen View</h4>
+                  <p className="text-sm text-zinc-500 leading-relaxed">For the best experience and layout accuracy, we recommend using the app in full-screen mode.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center text-xs font-black text-zinc-400">02</div>
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">Upload Files</h4>
+                  <p className="text-sm text-zinc-500 leading-relaxed">Upload a PDF, image (JPG, PNG, HEIC), or text file containing mathematics.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center text-xs font-black text-zinc-400">03</div>
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">AI Digitization</h4>
+                  <p className="text-sm text-zinc-500 leading-relaxed">Our AI transcribes handwriting and printed text into LaTeX and semantic HTML, preserving diagrams as accessible figures.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center text-xs font-black text-zinc-400">04</div>
+                <div>
+                  <h4 className="font-bold text-zinc-900 mb-1">Export & Share</h4>
+                  <p className="text-sm text-zinc-500 leading-relaxed">Download the result as a standalone, WCAG 2.2 AA compliant HTML file.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="pt-6 border-t border-zinc-100">
+            <h3 className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-4">Tips for Success</h3>
+            <div className="grid gap-4">
+              <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                <h5 className="text-xs font-black text-zinc-900 uppercase mb-1">Lighting & Quality</h5>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">Avoid shadows. Use dark ink on white paper. Ensure the page is as flat as possible for accurate symbol recognition.</p>
+              </div>
+              <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                <h5 className="text-xs font-black text-zinc-900 uppercase mb-1">File Size & Length</h5>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">Documents over 20 pages work best when split. Upload 5–10 pages at a time for faster processing and better AI focus.</p>
+              </div>
+              <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                <h5 className="text-xs font-black text-zinc-900 uppercase mb-1">Complex Layouts</h5>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">Use high-res images for pages with dense notes. Leave white space between text and diagrams to help the AI separate them.</p>
+              </div>
+              <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                <h5 className="text-xs font-black text-zinc-900 uppercase mb-1">Refine & Recreate</h5>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">Use "Refine Math" for complex formulas and "Magic Recreate" in the Figure Editor to turn messy sketches into clean digital diagrams.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <button 
+          onClick={onClose}
+          className="mt-10 w-full py-4 bg-zinc-950 text-white font-bold rounded-2xl hover:bg-zinc-800 transition-colors"
+        >
+          Got it, thanks!
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default HelpModal;

@@ -1,0 +1,353 @@
+import React, { useState, useEffect, Suspense } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import Header from './components/Header';
+import ProcessingOverlay from './components/ProcessingOverlay';
+const ImageEditor = React.lazy(() => import('./components/ImageEditor'));
+import Dashboard from './components/Dashboard';
+const ResultsView = React.lazy(() => import('./components/ResultsView'));
+const AccessibilityAuditReport = React.lazy(() => import('./components/AccessibilityAuditReport'));
+const HelpModal = React.lazy(() => import('./components/HelpModal'));
+const ResetWarningModal = React.lazy(() => import('./components/ResetWarningModal'));
+const ExportDialogModal = React.lazy(() => import('./components/ExportDialogModal'));
+import ErrorBanner from './components/ErrorBanner';
+import Footer from './components/Footer';
+import ReadingToolbar from './components/ReadingToolbar';
+import { TableOfContents } from './components/TableOfContents';
+import { useReadingMode } from './hooks/useReadingMode';
+import { useUsageTracking } from "./hooks/useUsageTracking";
+import { useProcessingTimer } from "./hooks/useProcessingTimer";
+import { useDigitization } from './hooks/useDigitization';
+import { ModelType, LayoutMode, MultiFileMode } from './types';
+import { generateHtmlDocument } from './utils/exportHtml';
+
+const App: React.FC = () => {
+  const { sessionRequestCount, dailyRequestCount, incrementUsage } = useUsageTracking();
+
+  const {
+    state,
+    originalFiles,
+    pageMapping,
+    handleFileUpload,
+    reprocessPage,
+    saveEditedFigure,
+    updatePageHtml,
+    setModel,
+    setThinkingLevel,
+    reset
+  } = useDigitization(incrementUsage);
+
+  const { elapsedTime } = useProcessingTimer(state.isProcessing);
+
+  const [viewMode, setViewMode] = useState<'preview' | 'source'>('preview');
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('paginated');
+  const [multiFileMode, setMultiFileMode] = useState<MultiFileMode>('combine');
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showAuditReport, setShowAuditReport] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [hasDownloaded, setHasDownloaded] = useState(false);
+  const [showResetWarning, setShowResetWarning] = useState(false);
+  const [isTocOpen, setIsTocOpen] = useState(false);
+  const [editingFigure, setEditingFigure] = useState<{ id: string, src: string, originalSrc: string, alt: string, caption: string, pageIndex: number } | null>(null);
+
+  const {
+    isReadingMode,
+    setIsReadingMode,
+    highContrastTheme,
+    setHighContrastTheme,
+    textSize,
+    setTextSize,
+    fontPreference,
+    setFontPreference,
+    lineHeight,
+    setLineHeight
+  } = useReadingMode();
+
+  const handleReset = () => {
+    if (state.results.length > 0 && !hasDownloaded) {
+      setShowResetWarning(true);
+    } else {
+      performReset();
+    }
+  };
+
+  const performReset = () => {
+    reset();
+    setActiveTab(0);
+    setViewMode('preview');
+    setLayoutMode('paginated');
+    setShowAuditReport(false);
+    setEditingFigure(null);
+    setHasDownloaded(false);
+    setShowResetWarning(false);
+    setShowExportModal(false);
+  };
+
+  const handleEditFigure = (pageIndex: number, figureId: string) => {
+    const page = state.results[pageIndex];
+    const figure = page.figures.find(f => f.id === figureId);
+    if (figure) {
+      setEditingFigure({ 
+        id: figureId,
+        pageIndex, 
+        src: figure.currentSrc,
+        originalSrc: figure.originalSrc,
+        alt: figure.alt,
+        caption: figure.caption
+      });
+    }
+  };
+
+  const executeDownload = (combine: boolean, customDocTitle?: string) => {
+    if (!originalFiles || originalFiles.length === 0) return;
+
+    if (combine || originalFiles.length === 1) {
+      // Clean base file name: strip any trailing extensions (.pdf, .png, .jpg, .html, etc.)
+      const rawDocName = customDocTitle?.trim() || originalFiles[0].name;
+      const baseFileName = rawDocName.replace(/\.[^/.]+$/, "");
+      const finalBaseName = baseFileName || `math_notes_${Date.now()}`;
+      // Use the actual uploaded file's complete name (with extension) for the relative link
+      const exactOriginalFileName = originalFiles[0]?.name || '';
+      
+      const template = generateHtmlDocument(
+        state.results, 
+        exactOriginalFileName, 
+        layoutMode,
+        isReadingMode,
+        highContrastTheme,
+        textSize,
+        fontPreference,
+        lineHeight
+      );
+      const blob = new Blob([template], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${finalBaseName}-acc.html`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } else {
+      // Group results by their original file index for separate downloads
+      for (let i = 0; i < originalFiles.length; i++) {
+        const fileResults = state.results
+          .filter((_, idx) => pageMapping[idx]?.fileIndex === i)
+          .map((r, idx) => ({
+            ...r,
+            pageNumber: idx + 1
+          }));
+        if (fileResults.length === 0) continue;
+
+        const originalFileName = originalFiles[i].name;
+        const baseFileName = originalFileName.replace(/\.[^/.]+$/, "") || `math_notes_${Date.now()}_${i + 1}`;
+        const template = generateHtmlDocument(
+          fileResults, 
+          originalFileName, 
+          layoutMode,
+          isReadingMode,
+          highContrastTheme,
+          textSize,
+          fontPreference,
+          lineHeight
+        );
+        const blob = new Blob([template], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${baseFileName}-acc.html`;
+        
+        // Stagger the downloads slightly to help the browser process multiple files
+        setTimeout(() => {
+          link.click();
+          URL.revokeObjectURL(url);
+        }, i * 300);
+      }
+    }
+    setHasDownloaded(true);
+  };
+
+  const handleDownloadHtml = () => {
+    if (!originalFiles || originalFiles.length === 0) return;
+
+    if (originalFiles.length > 1) {
+      // Show export choice and title prompt dialog for multi-file batches
+      setShowExportModal(true);
+    } else {
+      executeDownload(true);
+    }
+  };
+
+  const themeBgClass = {
+    default: 'bg-white text-zinc-900',
+    'hc-light': 'bg-white text-black',
+    'hc-dark': 'bg-black text-white',
+    'hc-yellow': 'bg-black text-[#ffff00]',
+    'hc-blue': 'bg-[#ffff00] text-[#000080]',
+    'hc-green': 'bg-black text-[#00ff00]'
+  }[highContrastTheme] || 'bg-white text-zinc-900';
+
+  const fontClass = `reading-font-${fontPreference}`;
+
+  return (
+    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${isReadingMode ? `${themeBgClass} ${fontClass}` : 'bg-white'}`}>
+      {isReadingMode && (
+        <ReadingToolbar 
+          highContrastTheme={highContrastTheme}
+          setHighContrastTheme={setHighContrastTheme}
+          textSize={textSize}
+          setTextSize={setTextSize}
+          fontPreference={fontPreference}
+          setFontPreference={setFontPreference}
+          lineHeight={lineHeight}
+          setLineHeight={setLineHeight}
+          onExit={() => setIsReadingMode(false)}
+          currentPage={activeTab}
+          totalPages={state.results.length}
+          onPageChange={setActiveTab}
+          layoutMode={layoutMode}
+          onDownloadHtml={handleDownloadHtml}
+          onToggleToc={() => setIsTocOpen(!isTocOpen)}
+        />
+      )}
+
+      {(state.results.length > 0 || state.isProcessing) && !isReadingMode && (
+        <Header onShowDocs={() => setShowHelp(true)} />
+      )}
+      
+      {state.isProcessing && (
+        <ProcessingOverlay 
+          progress={state.progress} 
+          currentImages={state.currentProcessingImages}
+          selectedModel={state.selectedModel}
+          actualModelUsed={state.actualModelUsed}
+          selectedThinkingLevel={state.selectedThinkingLevel}
+        />
+      )}
+
+      {showAuditReport && (
+        <Suspense fallback={null}>
+          <AccessibilityAuditReport 
+          results={state.results}
+          activeTab={activeTab}
+          state={state}
+          onClose={() => setShowAuditReport(false)}
+          onUpdateHtml={updatePageHtml}
+          onApiCall={incrementUsage}
+          sessionRequestCount={sessionRequestCount}
+          dailyRequestCount={dailyRequestCount}
+        />
+        </Suspense>
+      )}
+
+      {showHelp && (
+        <Suspense fallback={null}>
+          <HelpModal onClose={() => setShowHelp(false)} />
+        </Suspense>
+      )}
+
+      {showResetWarning && (
+        <Suspense fallback={null}>
+          <ResetWarningModal 
+          onCancel={() => setShowResetWarning(false)}
+          onConfirm={performReset}
+        />
+        </Suspense>
+      )}
+
+      {showExportModal && originalFiles && originalFiles.length > 0 && (
+        <Suspense fallback={null}>
+          <ExportDialogModal
+            isOpen={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            onConfirm={(combine, customTitle) => executeDownload(combine, customTitle)}
+            defaultTitle={originalFiles[0].name.replace(/\.[^/.]+$/, "")}
+            totalFiles={originalFiles.length}
+            totalPages={state.results.length}
+            initialCombineMode={multiFileMode === 'combine'}
+          />
+        </Suspense>
+      )}
+
+      <AnimatePresence>
+        {editingFigure && (
+          <Suspense fallback={null}>
+            <ImageEditor 
+            figure={editingFigure}
+            onSave={(update) => {
+              saveEditedFigure(update);
+              setEditingFigure(null);
+            }}
+            onClose={() => setEditingFigure(null)}
+            onApiCall={incrementUsage}
+          />
+          </Suspense>
+        )}
+      </AnimatePresence>
+
+      <main className={`flex-1 max-w-[1800px] mx-auto w-full py-8 transition-all duration-200 ${isReadingMode ? 'pt-36 sm:pt-40 md:pt-44 px-4 sm:px-6 lg:px-24' : 'px-4 sm:px-6 lg:px-12'}`} role="main">
+        {state.error && (
+          <ErrorBanner 
+            error={state.error} 
+            onClear={() => reset()} 
+          />
+        )}
+
+        {!state.results.length && !state.isProcessing ? (
+          <Dashboard 
+            onFileUpload={(files) => handleFileUpload(files, state.selectedModel, state.selectedThinkingLevel)} 
+            isProcessing={state.isProcessing} 
+            onShowDocs={() => setShowHelp(true)}
+            selectedModel={state.selectedModel}
+            onModelChange={setModel}
+            selectedThinkingLevel={state.selectedThinkingLevel}
+            onThinkingLevelChange={setThinkingLevel}
+            multiFileMode={multiFileMode}
+            onMultiFileModeChange={setMultiFileMode}
+          />
+        ) : (
+          <Suspense fallback={<div className="flex items-center justify-center p-12 text-zinc-500 text-sm animate-pulse">Loading Results View...</div>}>
+          <ResultsView 
+            results={state.results}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            onEditFigure={handleEditFigure}
+            onDownloadHtml={handleDownloadHtml}
+            onShowAudit={() => setShowAuditReport(true)}
+            onReset={handleReset}
+            layoutMode={layoutMode}
+            setLayoutMode={setLayoutMode}
+            onReprocessPage={(index) => reprocessPage(index, state.selectedModel, state.selectedThinkingLevel)}
+            onReprocessAll={() => originalFiles && originalFiles.length > 0 && handleFileUpload(originalFiles, state.selectedModel, state.selectedThinkingLevel)}
+            isProcessing={state.isProcessing}
+            onUpdateHtml={updatePageHtml}
+            isReadingMode={isReadingMode}
+            highContrastTheme={highContrastTheme}
+            textSize={textSize}
+            fontPreference={fontPreference}
+            lineHeight={lineHeight}
+            setIsReadingMode={setIsReadingMode}
+            onToggleToc={() => setIsTocOpen(!isTocOpen)}
+          />
+        </Suspense>
+        )}
+      </main>
+
+      {state.results.length > 0 && (
+        <TableOfContents 
+          results={state.results}
+          isOpen={isTocOpen}
+          onClose={() => setIsTocOpen(false)}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          layoutMode={layoutMode}
+        />
+      )}
+
+      <Footer isReadingMode={isReadingMode} />
+    </div>
+  );
+};
+
+export default App;
+
