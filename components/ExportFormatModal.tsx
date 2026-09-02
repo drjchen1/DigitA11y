@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Sparkles, FileCode, Check, X, FileText, Files, User, BookOpen, Edit3 } from 'lucide-react';
 import { DocumentMetadata } from '../types';
+import { stripFileExtension } from '../utils/fileName';
 
 export type ExportFlavor = 'full' | 'simplified';
 
@@ -41,7 +42,7 @@ export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onConfirm(combine, flavor, stripAnnotations, combine ? (docTitle.trim() || defaultTitle) : undefined);
+    onConfirm(combine, flavor, stripAnnotations, (combine || totalFiles === 1) ? (docTitle.trim() || defaultTitle) : undefined);
     onClose();
   };
 
@@ -254,7 +255,7 @@ export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-zinc-400">
-                  Will save as: <span className="font-mono text-zinc-700 font-semibold">{((docTitle.trim() || defaultTitle).replace(/\.[^/.]+$/, ""))}{flavor === 'simplified' ? '-clean.html' : '-acc.html'}</span>
+                  Will save as: <span className="font-mono text-zinc-700 font-semibold">{stripFileExtension(docTitle.trim() || defaultTitle)}{flavor === 'simplified' ? '-clean.html' : '-acc.html'}</span>
                 </p>
               </>
             ) : (

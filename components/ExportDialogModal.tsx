@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, FileText, Files, X } from 'lucide-react';
+import { stripFileExtension } from '../utils/fileName';
 
 interface ExportDialogModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ export const ExportDialogModal: React.FC<ExportDialogModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onConfirm(combine, combine ? (docTitle.trim() || defaultTitle) : undefined);
+    onConfirm(combine, (combine || totalFiles === 1) ? (docTitle.trim() || defaultTitle) : undefined);
     onClose();
   };
 
@@ -137,7 +138,7 @@ export const ExportDialogModal: React.FC<ExportDialogModalProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-zinc-400">
-                Will be saved as: <span className="font-mono text-zinc-600 font-semibold">{docTitle.trim() ? docTitle.trim().replace(/\.[^/.]+$/, "") : defaultTitle}-acc.html</span>
+                Will be saved as: <span className="font-mono text-zinc-600 font-semibold">{stripFileExtension(docTitle.trim() || defaultTitle)}-acc.html</span>
               </p>
             </div>
           )}

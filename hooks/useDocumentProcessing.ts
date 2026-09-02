@@ -27,11 +27,16 @@ const startReasoningStepInterval = (
     stepIndex++;
     const nextMsg = DYNAMIC_REASONING_STEPS[stepIndex % DYNAMIC_REASONING_STEPS.length];
     
-    setState(prev => ({
-      ...prev,
-      progress: prev.progress < maxSimulatedProgress ? Math.min(maxSimulatedProgress, prev.progress + 1) : prev.progress,
-      statusMessage: `${pageLabel}: ${nextMsg}`
-    }));
+    setState(prev => {
+      const nextProgress = prev.progress < maxSimulatedProgress 
+        ? Math.min(maxSimulatedProgress, prev.progress + 1) 
+        : prev.progress;
+      return {
+        ...prev,
+        progress: Math.max(prev.progress, nextProgress),
+        statusMessage: `${pageLabel}: ${nextMsg}`
+      };
+    });
   }, 2200);
 
   return () => clearInterval(intervalId);
@@ -81,24 +86,32 @@ export const useDocumentProcessing = (
       
       setState(prev => ({ ...prev, progress: 10, statusMessage: 'Analyzing document structure...' }));
       
-      const BATCH_SIZE = 2;
+      const BATCH_SIZE = 1;
       const CONCURRENCY_LIMIT = 2;
       const results: ConversionResult[] = new Array(totalPages);
       let completedPages = 0;
       
-      const progressPerPage = 90 / totalPages;
-      const OPTIMIZATION_WEIGHT = 0.2;
-      const AI_WEIGHT = 0.6;
-      const FIGURE_WEIGHT = 0.2;
+      // Cumulative milestone tracking per page (0 -> 0.2 -> 0.8 -> 1.0)
+      const pageProgressScores = new Array(totalPages).fill(0);
+      const calculateOverallProgress = () => {
+        const totalScore = pageProgressScores.reduce((sum, score) => sum + score, 0);
+        return Math.min(98, Math.round(10 + (totalScore / totalPages) * 88));
+      };
 
       const processBatch = async (batchIndices: number[]) => {
         try {
+          const pageLabel = batchIndices.length === 1 
+            ? `Page ${batchIndices[0] + 1}` 
+            : `Pages ${batchIndices.map(i => i + 1).join(', ')}`;
+
           setState(prev => {
             const current = prev.currentProcessingImages || [];
             const newImages = batchIndices.map(idx => pageData[idx].base64);
             return {
               ...prev, 
-              statusMessage: `Optimizing images for Pages ${batchIndices.map(i => i + 1).join(', ')}...`,
+              statusMessage: batchIndices.length === 1
+                ? `Optimizing image for ${pageLabel}...`
+                : `Optimizing images for ${pageLabel}...`,
               currentProcessingImages: [...current, ...newImages]
             };
           });
@@ -111,26 +124,23 @@ export const useDocumentProcessing = (
             };
           }));
 
-          const pageLabel = batchIndices.length === 1 
-            ? `Page ${batchIndices[0] + 1}` 
-            : `Pages ${batchIndices.map(i => i + 1).join(', ')}`;
-
-          let baseProgressAfterOpt = 28;
-          setState(prev => {
-            const nextProgress = Math.min(99, prev.progress + (batchIndices.length * progressPerPage * OPTIMIZATION_WEIGHT));
-            baseProgressAfterOpt = nextProgress;
-            return {
-              ...prev, 
-              progress: nextProgress,
-              statusMessage: `${pageLabel}: ${DYNAMIC_REASONING_STEPS[0]}`
-            };
+          batchIndices.forEach(idx => {
+            pageProgressScores[idx] = Math.max(pageProgressScores[idx], 0.2);
           });
+          const progressAfterOpt = calculateOverallProgress();
+
+          setState(prev => ({
+            ...prev, 
+            progress: Math.max(prev.progress, progressAfterOpt),
+            statusMessage: `${pageLabel}: ${DYNAMIC_REASONING_STEPS[0]}`
+          }));
 
           // Allow the progress bar to smoothly ease forward while waiting for Gemini response
-          const targetProgressAfterAI = Math.min(95, Math.round(baseProgressAfterOpt + (batchIndices.length * progressPerPage * AI_WEIGHT)));
+          const hypotheticalScoresSum = pageProgressScores.reduce((sum, score) => sum + score, 0) + (batchIndices.length * 0.6);
+          const maxSimulatedForBatch = Math.min(95, Math.round(10 + (hypotheticalScoresSum / totalPages) * 88) - 2);
           const stopReasoningTicker = startReasoningStepInterval(
             pageLabel,
-            Math.max(baseProgressAfterOpt, targetProgressAfterAI - 4),
+            Math.max(progressAfterOpt, maxSimulatedForBatch),
             setState
           );
 
@@ -145,9 +155,14 @@ export const useDocumentProcessing = (
 
           onApiCall?.();
 
+          batchIndices.forEach(idx => {
+            pageProgressScores[idx] = Math.max(pageProgressScores[idx], 0.8);
+          });
+          const progressAfterAI = calculateOverallProgress();
+
           setState(prev => ({ 
             ...prev, 
-            progress: targetProgressAfterAI,
+            progress: Math.max(prev.progress, progressAfterAI),
             statusMessage: `Processing mathematical figures for ${pageLabel}...`,
             actualModelUsed: batchResponses.actualModelUsed
           }));
@@ -225,14 +240,16 @@ export const useDocumentProcessing = (
               semanticTags
             };
 
+            pageProgressScores[i] = 1.0;
             completedPages++;
+            const progressAfterFigures = calculateOverallProgress();
 
             setState(prev => {
               const current = prev.currentProcessingImages || [];
               const imgToRemove = pageData[i].base64;
               return {
                 ...prev,
-                progress: Math.min(99, prev.progress + (progressPerPage * FIGURE_WEIGHT)),
+                progress: Math.max(prev.progress, progressAfterFigures),
                 statusMessage: `Completed ${completedPages} of ${totalPages} pages...`,
                 results: results.filter(r => r !== undefined).sort((a, b) => a.pageNumber - b.pageNumber),
                 currentProcessingImages: current.filter(img => img !== imgToRemove)
@@ -254,10 +271,19 @@ export const useDocumentProcessing = (
         batches.push(batch);
       }
 
-      for (let i = 0; i < batches.length; i += CONCURRENCY_LIMIT) {
-        const chunk = batches.slice(i, i + CONCURRENCY_LIMIT);
-        await Promise.all(chunk.map(processBatch));
-      }
+      // Process pages with a sliding-window concurrent worker pool (e.g. 2 parallel workers)
+      // When a worker finishes a simple page early, it immediately claims the next available page
+      let nextBatchIdx = 0;
+      const worker = async () => {
+        while (nextBatchIdx < batches.length) {
+          const currentBatchIdx = nextBatchIdx++;
+          await processBatch(batches[currentBatchIdx]);
+        }
+      };
+
+      const workerCount = Math.min(CONCURRENCY_LIMIT, batches.length);
+      const workers = Array.from({ length: workerCount }, () => worker());
+      await Promise.all(workers);
 
       const totalTime = Math.floor((Date.now() - startTime) / 1000);
 
@@ -314,7 +340,7 @@ export const useDocumentProcessing = (
 
       setState(prev => ({
         ...prev,
-        progress: 30,
+        progress: Math.max(prev.progress, 30),
         statusMessage: `Optimizing image for Page ${pageIndex + 1}...`,
         currentProcessingImages: [pageData[0].base64]
       }));
@@ -324,7 +350,7 @@ export const useDocumentProcessing = (
       const pageLabel = `Page ${pageIndex + 1}`;
       setState(prev => ({
         ...prev,
-        progress: 50,
+        progress: Math.max(prev.progress, 50),
         statusMessage: `${pageLabel}: ${DYNAMIC_REASONING_STEPS[0]}`
       }));
 
@@ -351,7 +377,7 @@ export const useDocumentProcessing = (
 
       setState(prev => ({
         ...prev,
-        progress: 80,
+        progress: Math.max(prev.progress, 80),
         statusMessage: `Processing mathematical figures for ${pageLabel}...`,
         actualModelUsed: batchResponses.actualModelUsed
       }));

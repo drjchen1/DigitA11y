@@ -20,6 +20,7 @@ import { useDigitization } from './hooks/useDigitization';
 import { ModelType, LayoutMode, MultiFileMode, DocumentMetadata } from './types';
 import { generateHtmlDocument } from './utils/exportHtml';
 import { generateSimplifiedHtmlDocument } from './utils/exportSimplifiedHtml';
+import { stripFileExtension } from './utils/fileName';
 const ExportFormatModal = React.lazy(() => import('./components/ExportFormatModal'));
 const DocumentMetadataModal = React.lazy(() => import('./components/DocumentMetadataModal'));
 
@@ -80,7 +81,7 @@ const App: React.FC = () => {
       }
     }
     if (detectedTitle === 'Mathematics Notes' && originalFiles && originalFiles.length > 0) {
-      detectedTitle = originalFiles[0].name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, ' ');
+      detectedTitle = stripFileExtension(originalFiles[0].name).replace(/[_-]/g, ' ');
     }
 
     return {
@@ -145,9 +146,9 @@ const App: React.FC = () => {
     if (!originalFiles || originalFiles.length === 0) return;
 
     if (combine || originalFiles.length === 1) {
-      // Clean base file name: strip any trailing extensions (.pdf, .png, .jpg, .html, etc.)
+      // Clean base file name: strip any trailing extensions (.pdf, .png, .jpg, .html, etc.) safely
       const rawDocName = customDocTitle?.trim() || originalFiles[0].name;
-      const baseFileName = rawDocName.replace(/\.[^/.]+$/, "");
+      const baseFileName = stripFileExtension(rawDocName);
       const finalBaseName = baseFileName || `math_notes_${Date.now()}`;
       // Use the actual uploaded file's complete name (with extension) for the relative link
       const exactOriginalFileName = originalFiles[0]?.name || '';
@@ -186,7 +187,7 @@ const App: React.FC = () => {
         if (fileResults.length === 0) continue;
 
         const originalFileName = originalFiles[i].name;
-        const baseFileName = originalFileName.replace(/\.[^/.]+$/, "") || `math_notes_${Date.now()}_${i + 1}`;
+        const baseFileName = stripFileExtension(originalFileName) || `math_notes_${Date.now()}_${i + 1}`;
         const fileMetadata: DocumentMetadata = {
           ...effectiveMetadata,
           title: effectiveMetadata.title !== 'Mathematics Notes' ? `${effectiveMetadata.title} (Part ${i + 1})` : baseFileName
@@ -312,7 +313,7 @@ const App: React.FC = () => {
             isOpen={showExportModal}
             onClose={() => setShowExportModal(false)}
             onConfirm={(combine, flavor, stripNotes, customTitle) => executeDownload(combine, flavor, stripNotes, customTitle)}
-            defaultTitle={originalFiles[0].name.replace(/\.[^/.]+$/, "")}
+            defaultTitle={stripFileExtension(originalFiles[0].name)}
             totalFiles={originalFiles.length}
             totalPages={state.results.length}
             initialCombineMode={multiFileMode === 'combine'}
