@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Download, Sparkles, FileCode, Check, X, FileText, Files } from 'lucide-react';
+import { Download, Sparkles, FileCode, Check, X, FileText, Files, User, BookOpen, Edit3 } from 'lucide-react';
+import { DocumentMetadata } from '../types';
 
 export type ExportFlavor = 'full' | 'simplified';
 
@@ -11,6 +12,8 @@ interface ExportFormatModalProps {
   totalFiles: number;
   totalPages: number;
   initialCombineMode: boolean;
+  metadata?: DocumentMetadata;
+  onOpenMetadataModal?: () => void;
 }
 
 export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
@@ -20,7 +23,9 @@ export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
   defaultTitle,
   totalFiles,
   totalPages,
-  initialCombineMode
+  initialCombineMode,
+  metadata,
+  onOpenMetadataModal
 }) => {
   const [combine, setCombine] = useState<boolean>(initialCombineMode);
   const [flavor, setFlavor] = useState<ExportFlavor>('full');
@@ -136,6 +141,46 @@ export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
                 />
                 <span>Also exclude margin notes and callout boxes</span>
               </label>
+            </div>
+          )}
+
+          {/* Embedded Metadata Banner & Edit Trigger */}
+          {metadata && (
+            <div className="p-3 bg-zinc-50 border border-zinc-200/80 rounded-2xl flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-0.5">
+                  Embedded Metadata
+                </div>
+                <div className="text-xs font-bold text-zinc-900 truncate">
+                  {metadata.title || 'Untitled'}
+                </div>
+                {(metadata.author || metadata.subject) && (
+                  <div className="text-[11px] text-zinc-500 truncate mt-0.5 flex items-center gap-2">
+                    {metadata.author && (
+                      <span className="flex items-center gap-1">
+                        <User size={11} className="text-zinc-400 shrink-0" />
+                        {metadata.author}
+                      </span>
+                    )}
+                    {metadata.subject && (
+                      <span className="flex items-center gap-1">
+                        <BookOpen size={11} className="text-zinc-400 shrink-0" />
+                        {metadata.subject}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {onOpenMetadataModal && (
+                <button
+                  type="button"
+                  onClick={onOpenMetadataModal}
+                  className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer shadow-2xs"
+                >
+                  <Edit3 size={12} />
+                  <span>Edit Metadata</span>
+                </button>
+              )}
             </div>
           )}
 

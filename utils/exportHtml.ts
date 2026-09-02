@@ -1,4 +1,4 @@
-import { ConversionResult, LayoutMode } from '../types';
+import { ConversionResult, LayoutMode, DocumentMetadata } from '../types';
 
 export const generateHtmlDocument = (
   results: ConversionResult[],
@@ -8,13 +8,31 @@ export const generateHtmlDocument = (
   highContrastTheme: string = 'default',
   textSize: number = 100,
   fontPreference: string = 'inter',
-  lineHeight: string = 'normal'
+  lineHeight: string = 'normal',
+  metadata?: DocumentMetadata
 ): string => {
   const firstPageHtml = results[0]?.html || '';
   const parser = new DOMParser();
   const doc = parser.parseFromString(firstPageHtml, 'text/html');
   const firstHeading = doc.querySelector('h1, h2, h3');
   const extractedTitle = firstHeading ? firstHeading.textContent?.trim() : 'Mathematics Course Notes';
+
+  const escapeXml = (str: string = '') => str.replace(/[&<>"']/g, m => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[m] || m));
+
+  const effectiveTitle = metadata?.title?.trim() || extractedTitle;
+  const effectiveAuthor = metadata?.author?.trim() || '';
+  const effectiveSubject = metadata?.subject?.trim() || 'Mathematics & STEM Notes';
+  const effectiveDescription = metadata?.description?.trim() || `Accessible digitized mathematical notes on ${effectiveTitle}`;
+  const effectiveKeywords = metadata?.keywords?.trim() || 'mathematics, STEM, lecture notes, LaTeX, MathJax, accessible math';
+  const effectiveInstitution = metadata?.institution?.trim() || '';
+  const effectiveCopyright = metadata?.copyright?.trim() || '';
+  const effectiveDate = metadata?.creationDate?.trim() || new Date().toISOString().split('T')[0];
   
   const cleanResults = results.map((r, pageIndex) => {
     let hIdx = 0;
@@ -291,7 +309,35 @@ export const generateHtmlDocument = (
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${extractedTitle} - Accessible Math Notes</title>
+    <title>${escapeXml(effectiveTitle)} - Accessible Math Notes</title>
+    ${effectiveAuthor ? `<meta name="author" content="${escapeXml(effectiveAuthor)}">` : ''}
+    ${effectiveSubject ? `<meta name="subject" content="${escapeXml(effectiveSubject)}">` : ''}
+    ${effectiveDescription ? `<meta name="description" content="${escapeXml(effectiveDescription)}">` : ''}
+    ${effectiveKeywords ? `<meta name="keywords" content="${escapeXml(effectiveKeywords)}">` : ''}
+    ${effectiveInstitution ? `<meta name="institution" content="${escapeXml(effectiveInstitution)}">` : ''}
+    <meta name="dcterms.title" content="${escapeXml(effectiveTitle)}">
+    ${effectiveAuthor ? `<meta name="dcterms.creator" content="${escapeXml(effectiveAuthor)}">` : ''}
+    ${effectiveSubject ? `<meta name="dcterms.subject" content="${escapeXml(effectiveSubject)}">` : ''}
+    ${effectiveDescription ? `<meta name="dcterms.description" content="${escapeXml(effectiveDescription)}">` : ''}
+    <meta name="dcterms.created" content="${escapeXml(effectiveDate)}">
+    ${effectiveCopyright ? `<meta name="dcterms.rights" content="${escapeXml(effectiveCopyright)}">` : ''}
+    <meta property="og:title" content="${escapeXml(effectiveTitle)}">
+    <meta property="og:description" content="${escapeXml(effectiveDescription || effectiveSubject)}">
+    <meta property="og:type" content="article">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ScholarlyArticle",
+      "headline": ${JSON.stringify(effectiveTitle)},
+      ${effectiveAuthor ? `"author": { "@type": "Person", "name": ${JSON.stringify(effectiveAuthor)} },` : ''}
+      "about": ${JSON.stringify(effectiveSubject)},
+      "description": ${JSON.stringify(effectiveDescription)},
+      ${effectiveKeywords ? `"keywords": ${JSON.stringify(effectiveKeywords)},` : ''}
+      ${effectiveInstitution ? `"publisher": { "@type": "Organization", "name": ${JSON.stringify(effectiveInstitution)} },` : ''}
+      "datePublished": ${JSON.stringify(effectiveDate)},
+      "inLanguage": "en"
+    }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         window.MathJax = {

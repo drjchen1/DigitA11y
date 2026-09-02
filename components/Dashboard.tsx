@@ -44,9 +44,17 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [pasteShortcut, setPasteShortcut] = useState('⌘V');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const configPopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      setPasteShortcut(isMac ? '⌘V' : 'Ctrl+V');
+    }
+  }, []);
 
   // Close settings popover when clicking outside
   useEffect(() => {
@@ -388,7 +396,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </h2>
             
             <p className="text-zinc-600 text-xs sm:text-sm mb-5 max-w-sm px-2 leading-relaxed">
-              Upload PDF, handwritten images, or paste screenshots (<kbd className="font-mono text-[10px] bg-zinc-100 px-1 py-0.5 rounded border border-zinc-200 text-zinc-700">⌘V</kbd>)
+              Upload PDF, handwritten images, or paste screenshots (<kbd className="font-mono text-[10px] bg-zinc-100 px-1 py-0.5 rounded border border-zinc-200 text-zinc-700">{pasteShortcut}</kbd>)
             </p>
 
             {/* Mobile-Friendly Dual Action Buttons */}

@@ -31,6 +31,7 @@ interface ResultsToolbarProps {
   onDownloadHtml: () => void;
   onReset: () => void;
   onToggleToc?: () => void;
+  onOpenMetadataModal?: () => void;
 }
 
 export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
@@ -48,7 +49,8 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
   isProcessing,
   onDownloadHtml,
   onReset,
-  onToggleToc
+  onToggleToc,
+  onOpenMetadataModal
 }) => {
   const [pageDropdownOpen, setPageDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -162,6 +164,19 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
               <List size={13} className="text-zinc-600" />
               <span className="hidden md:inline">Contents</span>
               <span className="md:hidden">ToC</span>
+            </button>
+          )}
+
+          {/* Document Properties & Metadata Trigger */}
+          {onOpenMetadataModal && (
+            <button
+              onClick={onOpenMetadataModal}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs"
+              title="Edit document properties & metadata (Author, Title, Subject)"
+            >
+              <FileText size={13} className="text-indigo-600" />
+              <span className="hidden lg:inline">Properties</span>
+              <span className="lg:hidden">Info</span>
             </button>
           )}
         </div>

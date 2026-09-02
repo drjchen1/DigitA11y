@@ -17,10 +17,11 @@ import { useReadingMode } from './hooks/useReadingMode';
 import { useUsageTracking } from "./hooks/useUsageTracking";
 import { useProcessingTimer } from "./hooks/useProcessingTimer";
 import { useDigitization } from './hooks/useDigitization';
-import { ModelType, LayoutMode, MultiFileMode } from './types';
+import { ModelType, LayoutMode, MultiFileMode, DocumentMetadata } from './types';
 import { generateHtmlDocument } from './utils/exportHtml';
 import { generateSimplifiedHtmlDocument } from './utils/exportSimplifiedHtml';
 const ExportFormatModal = React.lazy(() => import('./components/ExportFormatModal'));
+const DocumentMetadataModal = React.lazy(() => import('./components/DocumentMetadataModal'));
 
 const App: React.FC = () => {
   const { sessionRequestCount, dailyRequestCount, incrementUsage } = useUsageTracking();
@@ -47,6 +48,8 @@ const App: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [showAuditReport, setShowAuditReport] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showMetadataModal, setShowMetadataModal] = useState(false);
+  const [customMetadata, setCustomMetadata] = useState<DocumentMetadata | null>(null);
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [isTocOpen, setIsTocOpen] = useState(false);
@@ -64,6 +67,37 @@ const App: React.FC = () => {
     lineHeight,
     setLineHeight
   } = useReadingMode();
+
+  // Compute detected metadata from document content
+  const getDetectedMetadata = (): DocumentMetadata => {
+    let detectedTitle = 'Mathematics Notes';
+    if (state.results.length > 0 && state.results[0]?.html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(state.results[0].html, 'text/html');
+      const heading = doc.querySelector('h1, h2, h3');
+      if (heading && heading.textContent?.trim()) {
+        detectedTitle = heading.textContent.trim();
+      }
+    }
+    if (detectedTitle === 'Mathematics Notes' && originalFiles && originalFiles.length > 0) {
+      detectedTitle = originalFiles[0].name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, ' ');
+    }
+
+    return {
+      title: detectedTitle,
+      author: '',
+      subject: 'Mathematics & STEM Notes',
+      description: `Accessible digitized mathematical notes on ${detectedTitle}.`,
+      keywords: 'mathematics, STEM, lecture notes, LaTeX, accessible math',
+      institution: '',
+      language: 'en',
+      copyright: `© ${new Date().getFullYear()} All Rights Reserved`,
+      creationDate: new Date().toISOString().split('T')[0]
+    };
+  };
+
+  const defaultDetectedMetadata = getDetectedMetadata();
+  const effectiveMetadata: DocumentMetadata = customMetadata || defaultDetectedMetadata;
 
   const handleReset = () => {
     if (state.results.length > 0 && !hasDownloaded) {
@@ -83,6 +117,8 @@ const App: React.FC = () => {
     setHasDownloaded(false);
     setShowResetWarning(false);
     setShowExportModal(false);
+    setShowMetadataModal(false);
+    setCustomMetadata(null);
   };
 
   const handleEditFigure = (pageIndex: number, figureId: string) => {
@@ -117,7 +153,7 @@ const App: React.FC = () => {
       const exactOriginalFileName = originalFiles[0]?.name || '';
       
       const template = flavor === 'simplified'
-        ? generateSimplifiedHtmlDocument(state.results, layoutMode, stripAnnotations)
+        ? generateSimplifiedHtmlDocument(state.results, layoutMode, stripAnnotations, effectiveMetadata)
         : generateHtmlDocument(
             state.results, 
             exactOriginalFileName, 
@@ -126,7 +162,8 @@ const App: React.FC = () => {
             highContrastTheme,
             textSize,
             fontPreference,
-            lineHeight
+            lineHeight,
+            effectiveMetadata
           );
       const blob = new Blob([template], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
@@ -150,8 +187,12 @@ const App: React.FC = () => {
 
         const originalFileName = originalFiles[i].name;
         const baseFileName = originalFileName.replace(/\.[^/.]+$/, "") || `math_notes_${Date.now()}_${i + 1}`;
+        const fileMetadata: DocumentMetadata = {
+          ...effectiveMetadata,
+          title: effectiveMetadata.title !== 'Mathematics Notes' ? `${effectiveMetadata.title} (Part ${i + 1})` : baseFileName
+        };
         const template = flavor === 'simplified'
-          ? generateSimplifiedHtmlDocument(fileResults, layoutMode, stripAnnotations)
+          ? generateSimplifiedHtmlDocument(fileResults, layoutMode, stripAnnotations, fileMetadata)
           : generateHtmlDocument(
               fileResults, 
               originalFileName, 
@@ -160,7 +201,8 @@ const App: React.FC = () => {
               highContrastTheme,
               textSize,
               fontPreference,
-              lineHeight
+              lineHeight,
+              fileMetadata
             );
         const blob = new Blob([template], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -269,10 +311,24 @@ const App: React.FC = () => {
             isOpen={showExportModal}
             onClose={() => setShowExportModal(false)}
             onConfirm={(combine, flavor, stripNotes, customTitle) => executeDownload(combine, flavor, stripNotes, customTitle)}
-            defaultTitle={originalFiles[0].name.replace(/\.[^/.]+$/, "")}
+            defaultTitle={effectiveMetadata.title !== 'Mathematics Notes' ? effectiveMetadata.title : originalFiles[0].name.replace(/\.[^/.]+$/, "")}
             totalFiles={originalFiles.length}
             totalPages={state.results.length}
             initialCombineMode={multiFileMode === 'combine'}
+            metadata={effectiveMetadata}
+            onOpenMetadataModal={() => setShowMetadataModal(true)}
+          />
+        </Suspense>
+      )}
+
+      {showMetadataModal && (
+        <Suspense fallback={null}>
+          <DocumentMetadataModal
+            isOpen={showMetadataModal}
+            onClose={() => setShowMetadataModal(false)}
+            metadata={effectiveMetadata}
+            defaultDetectedMetadata={defaultDetectedMetadata}
+            onSave={(updated) => setCustomMetadata(updated)}
           />
         </Suspense>
       )}
@@ -338,6 +394,7 @@ const App: React.FC = () => {
             lineHeight={lineHeight}
             setIsReadingMode={setIsReadingMode}
             onToggleToc={() => setIsTocOpen(!isTocOpen)}
+            onOpenMetadataModal={() => setShowMetadataModal(true)}
           />
         </Suspense>
         )}

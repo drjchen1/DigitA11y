@@ -15,6 +15,7 @@ interface ResultsSidebarProps {
   onReprocessAll: () => void;
   isProcessing: boolean;
   onReset: () => void;
+  onOpenMetadataModal?: () => void;
 }
 
 export const ResultsSidebar: React.FC<ResultsSidebarProps> = ({
@@ -30,7 +31,8 @@ export const ResultsSidebar: React.FC<ResultsSidebarProps> = ({
   setShowAnnotations,
   onReprocessAll,
   isProcessing,
-  onReset
+  onReset,
+  onOpenMetadataModal
 }) => {
   const currentResult = results[activeTab];
   const tags = currentResult?.semanticTags;
@@ -153,6 +155,16 @@ export const ResultsSidebar: React.FC<ResultsSidebarProps> = ({
                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                Export PDF
              </button>
+             {onOpenMetadataModal && (
+               <button 
+                 onClick={onOpenMetadataModal}
+                 title="Edit document properties, author, title, and subject metadata"
+                 className="w-full py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 rounded-xl text-[10px] font-bold transition-all mb-2 flex items-center justify-center gap-2 cursor-pointer"
+               >
+                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M10 13l4 0"/><path d="M10 17l4 0"/></svg>
+                 <span>Edit Metadata & Info</span>
+               </button>
+             )}
              <button 
                 onClick={() => setShowAnnotations(!showAnnotations)}
                 title="Toggle margin notes, step-by-step breakdowns, and teacher annotations"

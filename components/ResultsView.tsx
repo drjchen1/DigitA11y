@@ -31,6 +31,7 @@ interface ResultsViewProps {
   lineHeight?: string;
   setIsReadingMode?: (val: boolean) => void;
   onToggleToc?: () => void;
+  onOpenMetadataModal?: () => void;
 }
 
 const ResultsView: React.FC<ResultsViewProps> = ({
@@ -55,7 +56,8 @@ const ResultsView: React.FC<ResultsViewProps> = ({
   fontPreference = 'inter',
   lineHeight = 'normal',
   setIsReadingMode,
-  onToggleToc
+  onToggleToc,
+  onOpenMetadataModal
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [showAnnotations, setShowAnnotations] = useState(false);
@@ -207,6 +209,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({
           onReprocessAll={onReprocessAll}
           isProcessing={isProcessing}
           onReset={onReset}
+          onOpenMetadataModal={onOpenMetadataModal}
         />
       )}
 
@@ -229,6 +232,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({
               onDownloadHtml={onDownloadHtml}
               onReset={onReset}
               onToggleToc={onToggleToc}
+              onOpenMetadataModal={onOpenMetadataModal}
             />
           )}
 

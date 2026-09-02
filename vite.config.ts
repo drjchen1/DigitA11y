@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => {
       plugins: [react(), tailwindcss()],
       define: {
         'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || ''),
-        '__BUILD_DATE__': JSON.stringify(new Date().toLocaleString())
+        '__BUILD_DATE__': JSON.stringify(new Date().toLocaleString()),
+        '__JULIAN_VERSION__': JSON.stringify(((new Date().getTime() / 86400000) + 2440587.5).toFixed(2))
       },
       resolve: {
         alias: {
