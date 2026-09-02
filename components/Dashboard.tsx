@@ -139,7 +139,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   // Human readable label for the model & thinking pill
-  const modelShortName = selectedModel === 'gemini-3.7-flash' ? '3.7 Flash' : '3.1 Pro';
+  const modelShortName = selectedModel === 'gemini-3.8-flash' ? '3.8 Flash' : selectedModel === 'gemini-3.7-flash' ? '3.7 Flash' : '3.1 Pro';
   const thinkingShortName = {
     'AUTO': 'Auto Reasoning',
     'LOW': 'Fast Thinking',
@@ -198,7 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             id="model-settings-toggle-btn"
           >
             <div className="flex items-center gap-1.5">
-              {selectedModel === 'gemini-3.7-flash' ? (
+              {selectedModel === 'gemini-3.8-flash' || selectedModel === 'gemini-3.7-flash' ? (
                 <Zap size={13} className="text-amber-500 fill-amber-500" />
               ) : (
                 <Sparkles size={13} className="text-indigo-600 fill-indigo-600" />
@@ -239,9 +239,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => onModelChange('gemini-3.7-flash')}
+                    onClick={() => onModelChange('gemini-3.8-flash')}
                     className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      selectedModel === 'gemini-3.7-flash'
+                      selectedModel === 'gemini-3.8-flash'
                         ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 ring-1 ring-indigo-600/30'
                         : 'border-zinc-200 hover:border-zinc-300 text-zinc-700 bg-zinc-50/50'
                     }`}
@@ -249,11 +249,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="flex items-center justify-between w-full mb-1">
                       <div className="flex items-center gap-1.5 font-bold text-xs">
                         <Zap size={13} className="text-amber-500 fill-amber-500" />
-                        <span>3.7 Flash</span>
+                        <span>3.8 Flash</span>
                       </div>
-                      {selectedModel === 'gemini-3.7-flash' && <Check size={13} className="text-indigo-700" />}
+                      {selectedModel === 'gemini-3.8-flash' && <Check size={13} className="text-indigo-700" />}
                     </div>
-                    <span className="text-[10px] text-zinc-600 leading-tight">Recommended · Fast & intelligent</span>
+                    <span className="text-[10px] text-zinc-600 leading-tight">Recommended · Next-gen speed & vision</span>
                   </button>
 
                   <button
@@ -273,6 +273,20 @@ const Dashboard: React.FC<DashboardProps> = ({
                       {selectedModel === 'gemini-3.1-pro-preview' && <Check size={13} className="text-indigo-700" />}
                     </div>
                     <span className="text-[10px] text-zinc-600 leading-tight">Max Reasoning · Deep proofs</span>
+                  </button>
+                </div>
+                <div className="mt-2 flex items-center justify-between px-1">
+                  <span className="text-[10px] text-zinc-500">Other models:</span>
+                  <button
+                    type="button"
+                    onClick={() => onModelChange('gemini-3.7-flash')}
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded transition-all cursor-pointer ${
+                      selectedModel === 'gemini-3.7-flash'
+                        ? 'bg-indigo-100 text-indigo-800 font-bold'
+                        : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
+                    }`}
+                  >
+                    {selectedModel === 'gemini-3.7-flash' ? '✓ Using 3.7 Flash' : 'Switch to 3.7 Flash'}
                   </button>
                 </div>
               </div>

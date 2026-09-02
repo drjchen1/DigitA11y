@@ -272,6 +272,7 @@ const App: React.FC = () => {
           selectedModel={state.selectedModel}
           actualModelUsed={state.actualModelUsed}
           selectedThinkingLevel={state.selectedThinkingLevel}
+          statusMessage={state.statusMessage}
         />
       )}
 
@@ -311,7 +312,7 @@ const App: React.FC = () => {
             isOpen={showExportModal}
             onClose={() => setShowExportModal(false)}
             onConfirm={(combine, flavor, stripNotes, customTitle) => executeDownload(combine, flavor, stripNotes, customTitle)}
-            defaultTitle={effectiveMetadata.title !== 'Mathematics Notes' ? effectiveMetadata.title : originalFiles[0].name.replace(/\.[^/.]+$/, "")}
+            defaultTitle={originalFiles[0].name.replace(/\.[^/.]+$/, "")}
             totalFiles={originalFiles.length}
             totalPages={state.results.length}
             initialCombineMode={multiFileMode === 'combine'}

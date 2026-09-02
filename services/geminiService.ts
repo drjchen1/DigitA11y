@@ -116,12 +116,12 @@ CRITICAL: Return ONLY the JSON object.
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.7-flash', thinkingLevelStr: string = 'LOW', retries = 3, onModelFallback?: (fallbackModel: ModelType) => void): Promise<{text: string, tokenCount: number, actualModel: ModelType}> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.8-flash', thinkingLevelStr: string = 'LOW', retries = 3, onModelFallback?: (fallbackModel: ModelType) => void): Promise<{text: string, tokenCount: number, actualModel: ModelType}> {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
   
   for (let i = 0; i < retries; i++) {
     try {
-      const isThinkingSupported = model.includes('pro') || model.includes('3.7-flash');
+      const isThinkingSupported = model.includes('pro') || model.includes('3.8-flash') || model.includes('3.7-flash');
 
       let currentThinkingLevel: ThinkingLevel | undefined;
       
@@ -232,8 +232,8 @@ async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: nu
         await sleep(waitTime);
         continue;
       }
-      // If we used gemini-3.7-flash or gemini-3.1-pro-preview, let's try fallback to gemini-3.5-flash!
-      if (model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+      // If we used gemini-3.8-flash, gemini-3.7-flash, or gemini-3.1-pro-preview, let's try fallback to gemini-3.5-flash!
+      if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
         console.warn(`Attempting fallback to gemini-3.5-flash due to error with ${model}:`, error);
         if (onModelFallback) onModelFallback('gemini-3.5-flash' as any);
         return callBatchGeminiWithRetry(images, 'gemini-3.5-flash' as any, thinkingLevelStr, retries, onModelFallback);
@@ -244,7 +244,7 @@ async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: nu
   throw new Error("Max retries exceeded");
 }
 
-export const convertBatchToHtml = async (images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.7-flash', thinkingLevelStr: string = 'LOW', onModelFallback?: (fallbackModel: ModelType) => void): Promise<BatchResponse> => {
+export const convertBatchToHtml = async (images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.8-flash', thinkingLevelStr: string = 'LOW', onModelFallback?: (fallbackModel: ModelType) => void): Promise<BatchResponse> => {
   let result = { text: "", tokenCount: 0, actualModel: model };
   try {
     result = await callBatchGeminiWithRetry(images, model, thinkingLevelStr, 3, onModelFallback);
@@ -270,8 +270,8 @@ export const convertBatchToHtml = async (images: { base64: string, pageNumber: n
   }
 };
 
-export const fixTextFormatting = async (text: string, model: ModelType = 'gemini-3.7-flash'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+export const fixTextFormatting = async (text: string, model: ModelType = 'gemini-3.8-flash'): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
   try {
     const response = await ai.models.generateContent({
       model: model,
@@ -292,7 +292,7 @@ export const fixTextFormatting = async (text: string, model: ModelType = 'gemini
       },
       config: {
         temperature: 0.1,
-        ...((model.includes('pro') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
+        ...((model.includes('pro') || model.includes('3.8-flash') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
       }
     });
 
@@ -312,7 +312,7 @@ export const fixTextFormatting = async (text: string, model: ModelType = 'gemini
     });
   } catch (error: any) {
     console.error('Fix text error:', error);
-    if (model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+    if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
       console.warn(`Retrying fixTextFormatting with gemini-3.5-flash fallback from ${model}`);
       return fixTextFormatting(text, 'gemini-3.5-flash' as any);
     }
@@ -320,8 +320,8 @@ export const fixTextFormatting = async (text: string, model: ModelType = 'gemini
   }
 };
 
-export const autoFixAccessibilityIssue = async (html: string, issueTitle: string, issueDescription: string, issueSuggestion: string, model: ModelType = 'gemini-3.7-flash'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+export const autoFixAccessibilityIssue = async (html: string, issueTitle: string, issueDescription: string, issueSuggestion: string, model: ModelType = 'gemini-3.8-flash'): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
   try {
     const response = await ai.models.generateContent({
       model: model,
@@ -347,7 +347,7 @@ export const autoFixAccessibilityIssue = async (html: string, issueTitle: string
       },
       config: {
         temperature: 0.1,
-        ...((model.includes('pro') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
+        ...((model.includes('pro') || model.includes('3.8-flash') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
       }
     });
 
@@ -367,7 +367,7 @@ export const autoFixAccessibilityIssue = async (html: string, issueTitle: string
     });
   } catch (error: any) {
     console.error('Auto-fix accessibility error:', error);
-    if (model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+    if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
       console.warn(`Retrying autoFixAccessibilityIssue with gemini-3.5-flash fallback from ${model}`);
       return autoFixAccessibilityIssue(html, issueTitle, issueDescription, issueSuggestion, 'gemini-3.5-flash' as any);
     }
@@ -375,8 +375,8 @@ export const autoFixAccessibilityIssue = async (html: string, issueTitle: string
   }
 };
 
-export const describeFigure = async (base64Image: string, model: ModelType = 'gemini-3.7-flash'): Promise<{alt: string, caption: string, tokenCount: number}> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+export const describeFigure = async (base64Image: string, model: ModelType = 'gemini-3.8-flash'): Promise<{alt: string, caption: string, tokenCount: number}> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
   try {
     const response = await ai.models.generateContent({
       model: model, // Dynamically use the selected model
@@ -407,7 +407,7 @@ export const describeFigure = async (base64Image: string, model: ModelType = 'ge
           },
           required: ["alt", "caption"]
         },
-        ...((model.includes('pro') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
+        ...((model.includes('pro') || model.includes('3.8-flash') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
       }
     });
 
@@ -423,7 +423,7 @@ export const describeFigure = async (base64Image: string, model: ModelType = 'ge
     };
   } catch (error: any) {
     console.error('Description error:', error);
-    if (model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+    if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
       console.warn(`Retrying describeFigure with gemini-3.5-flash fallback from ${model}`);
       return describeFigure(base64Image, 'gemini-3.5-flash' as any);
     }

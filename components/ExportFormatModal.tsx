@@ -32,6 +32,11 @@ export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
   const [stripAnnotations, setStripAnnotations] = useState<boolean>(false);
   const [docTitle, setDocTitle] = useState<string>(defaultTitle);
 
+  // Keep docTitle in sync if defaultTitle changes (e.g., when files are loaded or modal opens)
+  React.useEffect(() => {
+    setDocTitle(defaultTitle);
+  }, [defaultTitle, isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -222,22 +227,41 @@ export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
 
           {/* 3. Document Title Prompt */}
           <div className="space-y-1.5 pt-1 border-t border-zinc-100">
-            <label htmlFor="custom-doc-title" className="text-xs font-bold text-zinc-700">
-              File Name
-            </label>
-            <div className="relative">
-              <input
-                id="custom-doc-title"
-                type="text"
-                value={docTitle}
-                onChange={(e) => setDocTitle(e.target.value)}
-                placeholder="e.g. Calculus_Lecture_Notes"
-                className="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
-              />
-              <span className="absolute right-3 top-2.5 text-zinc-400 text-xs pointer-events-none">
-                -acc.html
-              </span>
+            <div className="flex items-center justify-between">
+              <label htmlFor="custom-doc-title" className="text-xs font-bold text-zinc-700">
+                File Name
+              </label>
+              {combine && totalFiles > 1 && (
+                <span className="text-[11px] text-zinc-400">Combined output</span>
+              )}
+              {!combine && totalFiles > 1 && (
+                <span className="text-[11px] text-zinc-400">Each file auto-named [file]-acc.html</span>
+              )}
             </div>
+            {combine || totalFiles === 1 ? (
+              <>
+                <div className="relative">
+                  <input
+                    id="custom-doc-title"
+                    type="text"
+                    value={docTitle}
+                    onChange={(e) => setDocTitle(e.target.value)}
+                    placeholder={defaultTitle}
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium pr-24"
+                  />
+                  <span className="absolute right-3 top-2.5 text-zinc-400 text-xs font-mono pointer-events-none">
+                    {flavor === 'simplified' ? '-clean.html' : '-acc.html'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Will save as: <span className="font-mono text-zinc-700 font-semibold">{((docTitle.trim() || defaultTitle).replace(/\.[^/.]+$/, ""))}{flavor === 'simplified' ? '-clean.html' : '-acc.html'}</span>
+                </p>
+              </>
+            ) : (
+              <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-600">
+                Each of the <span className="font-bold text-zinc-900">{totalFiles}</span> files will download separately using its original file name followed by <span className="font-mono text-indigo-700 font-semibold">{flavor === 'simplified' ? '-clean.html' : '-acc.html'}</span>.
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

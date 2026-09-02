@@ -10,6 +10,7 @@ interface ProcessingOverlayProps {
   selectedModel?: ModelType;
   actualModelUsed?: ModelType;
   selectedThinkingLevel?: ThinkingLevelType;
+  statusMessage?: string;
 }
 
 const FloatingMath = () => {
@@ -56,7 +57,14 @@ const FloatingMath = () => {
   );
 };
 
-const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({ progress, currentImages, selectedModel, actualModelUsed, selectedThinkingLevel = 'LOW' }) => {
+const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({ 
+  progress, 
+  currentImages, 
+  selectedModel, 
+  actualModelUsed, 
+  selectedThinkingLevel = 'LOW',
+  statusMessage 
+}) => {
   const isDone = progress >= 100;
   
   const imgSrcs = currentImages 
@@ -105,8 +113,8 @@ const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({ progress, current
             )}
           </AnimatePresence>
 
-          <div className="w-full max-w-[320px]">
-            <div className="h-4 w-full bg-zinc-100 rounded-full overflow-hidden border-2 border-zinc-200/50">
+          <div className="w-full max-w-md">
+            <div className="h-3 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200/60 shadow-inner">
               <motion.div 
                 className="h-full bg-indigo-500"
                 initial={{ width: 0 }}
@@ -114,23 +122,39 @@ const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({ progress, current
                 transition={{ duration: 0.5, ease: "easeOut" }}
               />
             </div>
-            <div className="mt-6 flex flex-col items-center gap-2">
-              <div className="relative h-10 w-full overflow-hidden flex items-center justify-center">
-                <AnimatePresence mode="popLayout">
-                  <motion.span
-                    key={isDone ? 'done' : 'processing'}
-                    initial={{ opacity: 0, y: 10 }}
+            
+            <div className="mt-4 flex flex-col items-center gap-2.5">
+              <div className="flex items-center justify-between w-full px-1">
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                  {isDone ? 'Complete' : 'AI Digitization'}
+                </span>
+                <span className="text-sm font-black text-indigo-600 font-mono">{Math.round(progress)}%</span>
+              </div>
+
+              {/* Dynamic reasoning & sub-status indicator */}
+              <div className="relative min-h-[40px] w-full flex items-center justify-center">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={statusMessage || (isDone ? 'done' : 'processing')}
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className="absolute text-xs font-black text-zinc-500 uppercase tracking-[0.1em] text-center px-4"
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.25 }}
+                    className="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-white/80 border border-zinc-200/70 shadow-xs text-center"
                   >
-                    {isDone ? 'Complete' : 'Processing...'}
-                  </motion.span>
+                    {!isDone && (
+                      <span className="relative flex h-2 w-2 flex-shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                      </span>
+                    )}
+                    <span className="text-xs font-semibold text-zinc-700 tracking-tight">
+                      {statusMessage || (isDone ? 'Conversion Complete' : 'Processing document...')}
+                    </span>
+                  </motion.div>
                 </AnimatePresence>
               </div>
-              <span className="text-sm font-black text-indigo-500">{Math.round(progress)}%</span>
-              
+
               {(actualModelUsed || selectedModel) && (
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-zinc-200 text-xs font-semibold text-zinc-700 shadow-sm mt-3 whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
@@ -139,9 +163,10 @@ const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({ progress, current
                       {(() => {
                         const modelToDisplay = actualModelUsed || selectedModel;
                         switch (modelToDisplay) {
+                          case 'gemini-3.8-flash': return 'Gemini 3.8 Flash';
                           case 'gemini-3.7-flash': return 'Gemini 3.7 Flash';
                           case 'gemini-3.5-flash': 
-                            return (selectedModel === 'gemini-3.7-flash' || selectedModel === 'gemini-3.1-pro-preview')
+                            return (selectedModel === 'gemini-3.8-flash' || selectedModel === 'gemini-3.7-flash' || selectedModel === 'gemini-3.1-pro-preview')
                               ? 'Gemini 3.5 Flash (Fallback)' 
                               : 'Gemini 3.5 Flash';
                           case 'gemini-3.1-flash-lite': return 'Gemini 3.1 Flash Lite';

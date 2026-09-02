@@ -7,6 +7,36 @@ import { cropImage } from '../utils/image';
 import { cleanAltText, fixHeadingOrder, replaceFigureInHtml, formatMathInText } from '../utils/dom';
 import { optimizeImageForGemini } from '../utils/imageOptimizer';
 
+const DYNAMIC_REASONING_STEPS = [
+  "Analyzing visual hierarchy & math layout...",
+  "Transcribing handwritten notes & math symbols...",
+  "Generating accessible KaTeX equations...",
+  "Structuring accessible tables & semantic headings...",
+  "Detecting figures & synthesizing alt descriptions...",
+  "Refining document structure for screen readers..."
+];
+
+const startReasoningStepInterval = (
+  pageLabel: string,
+  maxSimulatedProgress: number,
+  setState: React.Dispatch<React.SetStateAction<AppState>>
+) => {
+  let stepIndex = 0;
+  
+  const intervalId = setInterval(() => {
+    stepIndex++;
+    const nextMsg = DYNAMIC_REASONING_STEPS[stepIndex % DYNAMIC_REASONING_STEPS.length];
+    
+    setState(prev => ({
+      ...prev,
+      progress: prev.progress < maxSimulatedProgress ? Math.min(maxSimulatedProgress, prev.progress + 1) : prev.progress,
+      statusMessage: `${pageLabel}: ${nextMsg}`
+    }));
+  }, 2200);
+
+  return () => clearInterval(intervalId);
+};
+
 export const useDocumentProcessing = (
   state: AppState,
   setState: React.Dispatch<React.SetStateAction<AppState>>,
@@ -17,7 +47,7 @@ export const useDocumentProcessing = (
   onApiCall?: () => void
 ) => {
 
-  const handleFileUpload = async (files: File[], model: ModelType = 'gemini-3.7-flash', thinkingLevel: ThinkingLevelType = 'AUTO') => {
+  const handleFileUpload = async (files: File[], model: ModelType = 'gemini-3.8-flash', thinkingLevel: ThinkingLevelType = 'AUTO') => {
     if (!files || files.length === 0) return;
 
     setOriginalFiles(files);
@@ -81,24 +111,44 @@ export const useDocumentProcessing = (
             };
           }));
 
+          const pageLabel = batchIndices.length === 1 
+            ? `Page ${batchIndices[0] + 1}` 
+            : `Pages ${batchIndices.map(i => i + 1).join(', ')}`;
+
+          let baseProgressAfterOpt = 28;
           setState(prev => {
+            const nextProgress = Math.min(99, prev.progress + (batchIndices.length * progressPerPage * OPTIMIZATION_WEIGHT));
+            baseProgressAfterOpt = nextProgress;
             return {
               ...prev, 
-              progress: Math.min(99, prev.progress + (batchIndices.length * progressPerPage * OPTIMIZATION_WEIGHT)),
-              statusMessage: `Digitizing Pages ${batchIndices.map(i => i + 1).join(', ')}...`
+              progress: nextProgress,
+              statusMessage: `${pageLabel}: ${DYNAMIC_REASONING_STEPS[0]}`
             };
           });
 
-          const batchResponses = await convertBatchToHtml(batchImages, model, thinkingLevel, (fallbackModel) => {
-            setState(prev => ({ ...prev, actualModelUsed: fallbackModel }));
-          });
+          // Allow the progress bar to smoothly ease forward while waiting for Gemini response
+          const targetProgressAfterAI = Math.min(95, Math.round(baseProgressAfterOpt + (batchIndices.length * progressPerPage * AI_WEIGHT)));
+          const stopReasoningTicker = startReasoningStepInterval(
+            pageLabel,
+            Math.max(baseProgressAfterOpt, targetProgressAfterAI - 4),
+            setState
+          );
+
+          let batchResponses;
+          try {
+            batchResponses = await convertBatchToHtml(batchImages, model, thinkingLevel, (fallbackModel) => {
+              setState(prev => ({ ...prev, actualModelUsed: fallbackModel }));
+            });
+          } finally {
+            stopReasoningTicker();
+          }
 
           onApiCall?.();
 
           setState(prev => ({ 
             ...prev, 
-            progress: Math.min(99, prev.progress + (batchIndices.length * progressPerPage * AI_WEIGHT)),
-            statusMessage: `Processing mathematical figures for Pages ${batchIndices.map(i => i + 1).join(', ')}...`,
+            progress: targetProgressAfterAI,
+            statusMessage: `Processing mathematical figures for ${pageLabel}...`,
             actualModelUsed: batchResponses.actualModelUsed
           }));
 
@@ -232,7 +282,7 @@ export const useDocumentProcessing = (
     }
   };
 
-  const reprocessPage = async (pageIndex: number, model: ModelType = 'gemini-3.7-flash', thinkingLevel: ThinkingLevelType = 'AUTO') => {
+  const reprocessPage = async (pageIndex: number, model: ModelType = 'gemini-3.8-flash', thinkingLevel: ThinkingLevelType = 'AUTO') => {
     if (!originalFiles || originalFiles.length === 0) return;
     
     setState(prev => ({
@@ -271,16 +321,28 @@ export const useDocumentProcessing = (
 
       const optimizedImage = await optimizeImageForGemini(pageData[0].base64);
 
+      const pageLabel = `Page ${pageIndex + 1}`;
       setState(prev => ({
         ...prev,
         progress: 50,
-        statusMessage: `Digitizing Page ${pageIndex + 1}...`
+        statusMessage: `${pageLabel}: ${DYNAMIC_REASONING_STEPS[0]}`
       }));
 
       const batchImages = [{ base64: optimizedImage, pageNumber: pageIndex + 1 }];
-      const batchResponses = await convertBatchToHtml(batchImages, model, thinkingLevel, (fallbackModel) => {
-        setState(prev => ({ ...prev, actualModelUsed: fallbackModel }));
-      });
+      const stopReasoningTicker = startReasoningStepInterval(
+        pageLabel,
+        78,
+        setState
+      );
+
+      let batchResponses;
+      try {
+        batchResponses = await convertBatchToHtml(batchImages, model, thinkingLevel, (fallbackModel) => {
+          setState(prev => ({ ...prev, actualModelUsed: fallbackModel }));
+        });
+      } finally {
+        stopReasoningTicker();
+      }
       
       onApiCall?.();
 
@@ -290,7 +352,7 @@ export const useDocumentProcessing = (
       setState(prev => ({
         ...prev,
         progress: 80,
-        statusMessage: `Processing mathematical figures for Page ${pageIndex + 1}...`,
+        statusMessage: `Processing mathematical figures for ${pageLabel}...`,
         actualModelUsed: batchResponses.actualModelUsed
       }));
 

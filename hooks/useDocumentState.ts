@@ -8,7 +8,7 @@ export const useDocumentState = () => {
     results: [],
     error: null,
     statusMessage: 'Waiting for upload...',
-    selectedModel: 'gemini-3.7-flash',
+    selectedModel: 'gemini-3.8-flash',
     selectedThinkingLevel: 'AUTO'
   });
   

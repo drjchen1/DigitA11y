@@ -23,6 +23,10 @@ export const ExportDialogModal: React.FC<ExportDialogModalProps> = ({
   const [combine, setCombine] = useState<boolean>(initialCombineMode);
   const [docTitle, setDocTitle] = useState<string>(defaultTitle);
 
+  React.useEffect(() => {
+    setDocTitle(defaultTitle);
+  }, [defaultTitle, isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
