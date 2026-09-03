@@ -78,7 +78,7 @@ export const ResultsContent: React.FC<ResultsContentProps> = ({
                                EDIT MATH
                              </button>
                              <button 
-                               onClick={() => onReprocessPage(r.pageNumber - 1)}
+                               onClick={() => onReprocessPage(i)}
                                disabled={isProcessing}
                                className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[9px] font-bold uppercase tracking-widest hover:bg-amber-100 transition-colors disabled:opacity-50"
                                title="Reprocess this page"

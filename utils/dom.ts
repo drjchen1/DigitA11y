@@ -72,7 +72,7 @@ export const normalizeMathSpacing = (content: string): string => {
     return match;
   });
 
-  // 2. Optimize \underbrace and \overbrace (strip zero-width \mathclap to prevent horizontal text collisions)
+  // 2. Optimize \underbrace and \overbrace (ensure text labels are cleanly wrapped in \text{...} while preserving width-controls like \mathclap and \substack)
   let out = '';
   let i = 0;
   while (i < res.length) {
@@ -93,24 +93,31 @@ export const normalizeMathSpacing = (content: string): string => {
           if (label) {
             let labelContent = label.content.trim();
 
-            // Strip any \mathclap{...} or \clap{...} wrapping so that MathJax gives annotations their natural bounding width
-            while (/^\\(?:mathclap|clap)\s*\{/.test(labelContent)) {
+            // If label is wrapped in \mathclap{...} or \clap{...}, keep it and ensure inner English words are wrapped in \text{...}
+            const isClapped = /^\\(?:mathclap|clap)\s*\{/.test(labelContent);
+            if (isClapped) {
               const innerTarget = parseBalancedBraces(labelContent, labelContent.indexOf('{'));
               if (innerTarget) {
-                labelContent = innerTarget.content.trim();
-              } else {
-                break;
+                let inner = innerTarget.content.trim();
+                if (!inner.includes('\\text{') && /[a-zA-Z]{2,}\s+[a-zA-Z]{2,}/.test(inner)) {
+                  if (!inner.includes('\\')) {
+                    inner = `\\text{${inner}}`;
+                  }
+                }
+                inner = inner.replace(/\\(?:quad|qquad|;|,)\s*/g, ' ');
+                const clapCmd = labelContent.startsWith('\\clap') ? '\\clap' : '\\mathclap';
+                labelContent = `${clapCmd}{${inner}}`;
               }
-            }
-
-            // If label contains plain English words without \text{...}, wrap words in \text{...}
-            if (!labelContent.includes('\\text{') && /[a-zA-Z]{2,}\s+[a-zA-Z]{2,}/.test(labelContent)) {
-              if (!labelContent.includes('\\')) {
-                labelContent = `\\text{${labelContent}}`;
+            } else {
+              // If label contains plain English words without \text{...}, wrap words in \text{...}
+              if (!labelContent.includes('\\text{') && /[a-zA-Z]{2,}\s+[a-zA-Z]{2,}/.test(labelContent)) {
+                if (!labelContent.includes('\\')) {
+                  labelContent = `\\text{${labelContent}}`;
+                }
               }
+              // Clean up multi-space or awkward spacing macros in text labels
+              labelContent = labelContent.replace(/\\(?:quad|qquad|;|,)\s*/g, ' ');
             }
-            // Clean up multi-space or awkward spacing macros in text labels
-            labelContent = labelContent.replace(/\\(?:quad|qquad|;|,)\s*/g, ' ');
 
             const cmd = isUnder ? '\\underbrace' : '\\overbrace';
             out += `${cmd}{${target.content}}${symbol}{${labelContent}}`;
@@ -129,9 +136,6 @@ export const normalizeMathSpacing = (content: string): string => {
     const cleaned = inner.replace(/\s{2,}/g, ' ').replace(/\\(?:quad|qquad)\s*/g, ' ');
     return `\\text{${cleaned}}`;
   });
-
-  // 4. Strip any remaining standalone \mathclap{...} to prevent zero-width overlap bugs
-  out = out.replace(/\\mathclap\{([^{}]*)\}/g, '$1');
 
   return out;
 };

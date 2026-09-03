@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { ConversionResult, AppState } from '../types';
-import { autoFixAccessibilityIssue } from '../services/geminiService';
+import { autoFixAccessibilityIssue, autoFixAllAccessibilityIssues } from '../services/geminiService';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 interface AccessibilityAuditReportProps {
   results: ConversionResult[];
@@ -16,9 +17,10 @@ interface AccessibilityAuditReportProps {
 
 const AccessibilityAuditReport: React.FC<AccessibilityAuditReportProps> = ({ results, activeTab, state, onClose, onUpdateHtml, onApiCall, sessionRequestCount, dailyRequestCount }) => {
   const activeAudit = results[activeTab]?.audit;
-  const failingChecks = activeAudit?.checks.filter(check => !check.passed).slice(0, 3) || [];
+  const failingChecks = activeAudit?.checks.filter(check => !check.passed) || [];
   
   const [fixingIndex, setFixingIndex] = useState<number | null>(null);
+  const [isFixingAll, setIsFixingAll] = useState<boolean>(false);
 
   const handleAutoFix = async (check: any, idx: number) => {
     setFixingIndex(idx);
@@ -38,6 +40,26 @@ const AccessibilityAuditReport: React.FC<AccessibilityAuditReportProps> = ({ res
       alert("Failed to apply auto-fix. Please try again.");
     } finally {
       setFixingIndex(null);
+    }
+  };
+
+  const handleAutoFixAll = async () => {
+    if (failingChecks.length === 0) return;
+    setIsFixingAll(true);
+    try {
+      const currentHtml = results[activeTab].html;
+      const newHtml = await autoFixAllAccessibilityIssues(
+        currentHtml,
+        failingChecks.map(c => ({ title: c.title, description: c.description, suggestion: c.suggestion })),
+        state.selectedModel
+      );
+      onApiCall();
+      onUpdateHtml(activeTab, newHtml);
+    } catch (error) {
+      console.error("Failed to auto-fix all issues:", error);
+      alert("Failed to apply comprehensive auto-fix. Please try again.");
+    } finally {
+      setIsFixingAll(false);
     }
   };
 
@@ -130,12 +152,31 @@ const AccessibilityAuditReport: React.FC<AccessibilityAuditReportProps> = ({ res
 
           {failingChecks.length > 0 && (
             <section className="bg-amber-50 p-8 rounded-[2rem] border border-amber-100">
-              <h3 className="text-xs font-black text-amber-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Top Fixes Needed
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h3 className="text-xs font-black text-amber-900 uppercase tracking-widest flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span>Top Fixes Needed ({failingChecks.length})</span>
+                </h3>
+                <button
+                  onClick={handleAutoFixAll}
+                  disabled={isFixingAll || fixingIndex !== null}
+                  className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isFixingAll ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Resolving All Issues with AI...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Fix All {failingChecks.length} Issues with AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
               <div className="grid gap-4">
                 {failingChecks.map((check, idx) => (
                   <div key={idx} className="flex gap-4 items-start bg-white/50 p-4 rounded-2xl border border-amber-200/50">
@@ -156,7 +197,19 @@ const AccessibilityAuditReport: React.FC<AccessibilityAuditReportProps> = ({ res
           )}
 
           <section>
-            <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-6">Detailed Checks</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest">Detailed Checks</h3>
+              {failingChecks.length > 0 && (
+                <button
+                  onClick={handleAutoFixAll}
+                  disabled={isFixingAll || fixingIndex !== null}
+                  className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Auto-Fix All Remaining</span>
+                </button>
+              )}
+            </div>
             <div className="grid gap-4">
               {activeAudit?.checks.map((check, idx) => (
                 <div key={idx} className={`p-6 rounded-3xl border ${check.passed ? 'bg-zinc-50/50 border-zinc-200' : 'bg-amber-50/30 border-amber-100'}`}>

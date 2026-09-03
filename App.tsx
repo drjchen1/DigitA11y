@@ -8,7 +8,6 @@ const ResultsView = React.lazy(() => import('./components/ResultsView'));
 const AccessibilityAuditReport = React.lazy(() => import('./components/AccessibilityAuditReport'));
 const HelpModal = React.lazy(() => import('./components/HelpModal'));
 const ResetWarningModal = React.lazy(() => import('./components/ResetWarningModal'));
-const ExportDialogModal = React.lazy(() => import('./components/ExportDialogModal'));
 import ErrorBanner from './components/ErrorBanner';
 import Footer from './components/Footer';
 import ReadingToolbar from './components/ReadingToolbar';

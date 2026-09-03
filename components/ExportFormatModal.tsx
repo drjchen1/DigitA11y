@@ -53,7 +53,7 @@ export const ExportFormatModal: React.FC<ExportFormatModalProps> = ({
       aria-modal="true" 
       aria-labelledby="export-options-title"
     >
-      <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border border-zinc-200 animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border border-zinc-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
           <div className="flex items-center gap-3">

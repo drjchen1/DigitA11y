@@ -257,7 +257,7 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
               {/* Reprocess Icon Pill attached right to page nav */}
               <div className="w-px h-3.5 bg-zinc-200 mx-0.5" />
               <button
-                onClick={() => onReprocessPage(currentPageNumber - 1)}
+                onClick={() => onReprocessPage(activeTab)}
                 disabled={isProcessing}
                 className="p-1 rounded-lg text-amber-700 hover:bg-amber-50 disabled:opacity-40 transition-all"
                 title="Reprocess this page with AI"

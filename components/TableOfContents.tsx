@@ -44,7 +44,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
         }
         items.push({
           id,
-          text: h.textContent || 'Untitled',
+          text: h.innerHTML || h.textContent || 'Untitled',
           level: parseInt(h.tagName.substring(1)),
           pageIndex
         });
@@ -121,7 +121,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
               <span className="shrink-0 mt-0.5">
                 {item.level === 1 && <ChevronRight size={14} />}
               </span>
-              <span className="line-clamp-2">{item.text}</span>
+              <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: item.text }} />
             </button>
           ))
         )}

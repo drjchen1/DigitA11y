@@ -1,6 +1,6 @@
 {
   "name": "DigitA11y",
-  "description": "Core Features\n- Accessible Transcription: Converts handwritten notes into WCAG 2.2 AA compliant HTML.\n- Smart Figure Handling: Automatically crops figures and generates AI-powered descriptions and Alt Text. These can all be edited prior to downloading the HTML.\n- Precision Math Rendering: Transforms complex equations into screen-reader-friendly LaTeX.\n- Visual Refinement & Annotation: Includes touch-up tools, highlighters, and sticky notes for documents and figures.",
+  "description": "Accessible transcription converting handwritten math notes into WCAG 2.2 AA compliant documents with smart figure handling and screen-reader math.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -36,10 +36,12 @@ Rules:
      - Matrices and vectors: '\\begin{pmatrix} ... \\end{pmatrix}' or '\\begin{bmatrix} ... \\end{bmatrix}' or determinants '\\begin{vmatrix} ... \\end{vmatrix}'.
    - UNDERBRACES, OVERBRACES & MATH ANNOTATIONS (CRITICAL):
      - Use \\underbrace{expression}_{\text{label}} (or \\overbrace{expression}^{\text{label}}) to represent curly brackets under or over math expressions.
-     - NEVER use \\mathclap or \\clap on underbrace labels when multiple terms have underbraces, as it zeroes out label width and causes severe horizontal text overlapping and collisions. Standard \\underbrace naturally calculates horizontal bounding width to keep labels distinct and legible.
-     - MULTI-LINE ANNOTATIONS: For multi-line annotations or longer notes under a single term, use \\substack with \\text{...} on each line: \\underbrace{k}_{\\substack{\\text{constant of proportionality} \\\\ \\text{(\"is proportional to\")}}}.
+     - AVOIDING AWKWARD SPACING GAPS: By default, a long text label under an \\underbrace forces the surrounding math to space out to accommodate the text width. This creates ugly gaps (e.g. x \\underbrace{(a-py)}_{\\text{long text}}). To fix this, you MUST shrink the width of the label.
+     - METHOD 1 (PREFERRED): Break the long text into a narrow multi-line stack using \\substack with \\text{...} on each line: \\underbrace{k}_{\\substack{\\text{constant of proportionality} \\\\ \\text{(\"is proportional to\")}}}. This maintains a reasonable bounding box while preventing ugly gaps.
+     - METHOD 2 (ISOLATED TERMS ONLY): You may use \\mathclap{\\text{...}} to completely zero out the width (e.g. x \\underbrace{(a-py)}_{\\mathclap{\\text{act as reduction to growth rate}}}). However, NEVER use \\mathclap if there are multiple adjacent underbraces on the same line, as the text labels will collide and overlap.
      - FOR ALL WORDS IN MATH / BRACES: ALWAYS wrap English words inside \\text{...} (e.g., \\underbrace{(y')}_{\\text{coeff. } y' \\text{ contains } y'}} or \\underbrace{\\sin y}_{\\text{this makes the eq. nonlinear}}).
      - NEVER place plain English words directly into math mode without \\text{...} (e.g., NEVER write $is proportional to$; write definitions like 'k: Constant of proportionality ("is proportional to")' in regular HTML text, or wrap words inside \\text{...} if in math).
+     - NO ARTIFICIAL SPACING BETWEEN VARIABLES: You MUST NEVER insert artificial wide spacing (like \\quad, \\qquad, \\;, \\ , or hard spaces) between variables, coefficients, and parenthesized terms. For example, write x(a-py) exactly, NEVER x \\quad (a-py) or x \\ (a-py).
      - TIGHT, NATURAL OPERATOR SPACING: Maintain compact, natural mathematical spacing between terms and operators (e.g., y'' + \\underbrace{(y')}_{\\text{coeff. } y' \\text{ contains } y'}} y' + y = 0 or y'' + \\underbrace{\\sin y}_{\\text{this makes the eq. nonlinear}} = 0) without inserting artificial \\quad, \\qquad, or wide gaps between words.
    - Ensure backslashes are present for all functions (e.g., \\sin, \\cos, \\log, \\ln, \\sqrt, \\int, \\sum, \\lim, \\times, \\partial).
    - Double check that delimiters (\\( \\), \\[ \\]) and brackets are fully closed.
@@ -321,28 +323,46 @@ export const fixTextFormatting = async (text: string, model: ModelType = 'gemini
 };
 
 export const autoFixAccessibilityIssue = async (html: string, issueTitle: string, issueDescription: string, issueSuggestion: string, model: ModelType = 'gemini-3.8-flash'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is required.");
+  }
+  const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
   try {
     const response = await ai.models.generateContent({
       model: model,
       contents: {
         parts: [
-          { text: `You are an expert in Web Accessibility (WCAG 2.2 AA) and semantic HTML.
-          Your task is to fix a specific accessibility issue in the provided HTML.
-          
-          ISSUE TITLE: ${issueTitle}
-          ISSUE DESCRIPTION: ${issueDescription}
-          SUGGESTION: ${issueSuggestion}
-          
-          RULES:
-          1. Apply the suggested fix to the HTML to resolve the accessibility issue.
-          2. Do NOT change anything else in the HTML unless it's necessary for the fix.
-          3. Maintain the original structure, classes, and content as much as possible.
-          4. If you see any <mjx-container> or <math> tags, DO NOT touch them or convert them. Leave them exactly as they are.
-          5. Return ONLY the corrected HTML string. Do not include markdown code blocks like \`\`\`html.
-          
-          HTML TO FIX:
-          ${html}` }
+          { text: `You are an expert in Web Accessibility (WCAG 2.2 AA) and semantic mathematical HTML.
+Your task is to fix a specific accessibility issue in the provided HTML document.
+
+ACCESSIBILITY ISSUE TO FIX:
+- Title: ${issueTitle}
+- Description: ${issueDescription}
+- Suggested Fix: ${issueSuggestion}
+
+STRICT ARCHITECTURAL & COMPLIANCE RULES:
+1. MATHEMATICAL FORMULA INTEGRITY:
+   - All formulas MUST strictly preserve their LaTeX delimiters: \\( ... \\) for inline math and \\[ ... \\] for display math.
+   - NEVER alter, remove, escape, or unescape LaTeX backslashes or macros (e.g. \\frac, \\sum, \\int, \\aligned, \\sqrt).
+   - NEVER touch or modify MathJax/KaTeX elements (<mjx-container>, <math>) if present.
+
+2. ISSUE-SPECIFIC REMEDIATION PATTERNS:
+   - Heading Order (1.3.1): Re-sequence heading tags (<h1>, <h2>, <h3>, <h4>) so they follow a strict hierarchical order without skipping levels (e.g., ensure an <h1> exists as primary title, followed by <h2>, then <h3>).
+   - Landmarks (1.3.1): If semantic landmarks are missing, ensure main content is wrapped inside semantic elements like <article role="article" class="math-document">, <header>, <section>, or <main>.
+   - Table Data (1.3.1): In any <table> elements, ensure header cells use <th> elements with explicit scope="col" (for column headers) and scope="row" (for row headers). Convert top row <td> to <th scope="col">.
+   - Contrast (1.4.3): Replace low-contrast gray text classes (such as text-slate-300, text-gray-300, text-zinc-300, text-slate-400) with high-contrast, accessible classes (text-slate-800, text-zinc-900).
+   - Alt Text (1.1.1) & Figures: Ensure all <img> tags have meaningful descriptive alt="..." attributes and are wrapped inside <figure role="group"> with descriptive <figcaption>.
+   - Keyboard & Interactive (2.1.1): Ensure all buttons/links have text or aria-label and remove improper tabindex="-1".
+   - Math Structure (1.3.1): Ensure any raw single dollar signs ($...$) or double dollar signs ($$...$$) are converted to standard \\( ... \\) and \\[ ... \\].
+
+3. MINIMAL SURGICAL INTERVENTION:
+   - Apply ONLY the necessary changes to resolve the accessibility violation.
+   - Preserve all existing Tailwind classes, styling, layout wrappers, and HTML IDs.
+   - Return ONLY the clean, corrected HTML. Do NOT wrap in markdown code fences (\`\`\`html) or include explanatory text.
+
+HTML TO FIX:
+${html}` }
         ]
       },
       config: {
@@ -370,6 +390,88 @@ export const autoFixAccessibilityIssue = async (html: string, issueTitle: string
     if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
       console.warn(`Retrying autoFixAccessibilityIssue with gemini-3.5-flash fallback from ${model}`);
       return autoFixAccessibilityIssue(html, issueTitle, issueDescription, issueSuggestion, 'gemini-3.5-flash' as any);
+    }
+    throw error;
+  }
+};
+
+export const autoFixAllAccessibilityIssues = async (
+  html: string,
+  failingChecks: { title: string; description: string; suggestion?: string }[],
+  model: ModelType = 'gemini-3.8-flash'
+): Promise<string> => {
+  if (!failingChecks || failingChecks.length === 0) {
+    return html;
+  }
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is required.");
+  }
+  const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+
+  const issuesSummary = failingChecks.map((c, i) => 
+    `${i + 1}. [${c.title}]: ${c.description}${c.suggestion ? ` -> Recommendation: ${c.suggestion}` : ''}`
+  ).join('\n');
+
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: {
+        parts: [
+          { text: `You are an expert in Web Accessibility (WCAG 2.2 AA) and mathematical HTML document remediation.
+Your task is to fix ALL identified accessibility issues in the provided document in a single comprehensive pass.
+
+FAILING ACCESSIBILITY CHECKS TO RESOLVE:
+${issuesSummary}
+
+STRICT REMEDIATION DIRECTIVES:
+1. PRESERVE MATHEMATICS:
+   - All math formulas MUST keep their exact KaTeX delimiters: \\( ... \\) for inline math and \\[ ... \\] for display math.
+   - Do NOT unescape, alter, or remove LaTeX expressions or backslashes.
+   - Do NOT touch <mjx-container> or <math> elements.
+
+2. SYSTEMATIC WCAG RESOLUTION:
+   - Headings: Ensure hierarchical heading sequence starting with <h1> for main page title, followed by <h2>, <h3> without skipping levels.
+   - Landmarks: Wrap primary content in <article role="article" class="math-document"> or <section> elements.
+   - Tables: Ensure every <table> has <th scope="col"> / <th scope="row"> header cells.
+   - Colors/Contrast: Replace low-contrast gray text classes (text-slate-300, text-gray-300) with accessible dark text (text-slate-800).
+   - Figures: Ensure all <img> tags have descriptive alt="..." attributes and are wrapped in <figure role="group">.
+   - Math structure: Convert any bare $...$ or $$...$$ delimiters to \\( ... \\) and \\[ ... \\].
+
+3. OUTPUT FORMAT:
+   - Return ONLY the corrected HTML string.
+   - Do NOT wrap in markdown code blocks like \`\`\`html.
+   - Keep all layout styles, IDs, and classes intact.
+
+HTML DOCUMENT:
+${html}` }
+        ]
+      },
+      config: {
+        temperature: 0.1,
+        ...((model.includes('pro') || model.includes('3.8-flash') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
+      }
+    });
+
+    let result = response.text?.trim() || "";
+    if (!result) {
+      throw new Error("Empty response from Gemini during comprehensive fix");
+    }
+    if (result.startsWith('```html')) {
+      result = result.replace(/^```html\n?/, '').replace(/\n?```$/, '');
+    } else if (result.startsWith('```')) {
+      result = result.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    }
+    return beautify.html(result, {
+      indent_size: 2,
+      wrap_line_length: 120,
+      preserve_newlines: true
+    });
+  } catch (error: any) {
+    console.error('Auto-fix all accessibility issues error:', error);
+    if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
+      console.warn(`Retrying autoFixAllAccessibilityIssues with gemini-3.5-flash fallback from ${model}`);
+      return autoFixAllAccessibilityIssues(html, failingChecks, 'gemini-3.5-flash' as any);
     }
     throw error;
   }
@@ -426,6 +528,132 @@ export const describeFigure = async (base64Image: string, model: ModelType = 'ge
     if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
       console.warn(`Retrying describeFigure with gemini-3.5-flash fallback from ${model}`);
       return describeFigure(base64Image, 'gemini-3.5-flash' as any);
+    }
+    throw error;
+  }
+};
+
+export interface SvgGenerationResult {
+  svg: string;
+  dataUri: string;
+  tokenCount: number;
+}
+
+export const generateSvgDiagramFromImage = async (
+  base64Image: string,
+  caption: string = "",
+  alt: string = "",
+  model: ModelType = 'gemini-3.8-flash'
+): Promise<SvgGenerationResult> => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is required.");
+  }
+  const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
+
+  let mimeType = 'image/png';
+  if (base64Image.startsWith('data:')) {
+    const match = base64Image.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+    if (match) {
+      mimeType = match[1];
+    }
+  }
+  const rawBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: {
+        parts: [
+          { inlineData: { mimeType, data: rawBase64 } },
+          { text: `You are an expert mathematical illustrator and SVG developer.
+Your task is to reconstruct the mathematical diagram/plot/geometry shown in this cropped image into a clean, modern, accessible Scalable Vector Graphic (<svg>).
+
+CONTEXT:
+- Title/Alt: ${alt || "Mathematical figure"}
+- Caption: ${caption || "Mathematical plot or diagram"}
+
+CRITICAL SVG SPECIFICATIONS:
+1. ROOT ELEMENT & BOUNDS:
+   - Must be a valid <svg> root element with a tight, well-fitted viewBox (e.g. viewBox="0 0 800 600" or proportional to the aspect ratio).
+   - The viewBox MUST tightly bound the diagram content with minimal margins (5-10% padding maximum). DO NOT create a huge empty canvas with tiny elements in the center. Scale the coordinates so the diagram fills the available viewBox area boldly and legibly.
+   - Must include xmlns="http://www.w3.org/2000/svg".
+   - Must include width="100%" height="auto" and style="max-width: 100%; display: block;" for responsive fluid scaling.
+   - Use clean, modern stroke colors (e.g. #4338ca for primary function curves, #0284c7 for secondary curves, #3f3f46 for axes and tick marks, #ffffff for background).
+
+2. ACCESSIBILITY:
+   - Include an accessible <title>${alt || "Mathematical Diagram"}</title>.
+   - Include an accessible <desc>${caption || "Vector diagram representation"}</desc>.
+
+3. COORDINATE SYSTEMS & LABELS (if applicable):
+   - Define arrowheads in <defs>:
+     <defs>
+       <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+         <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#3f3f46"/>
+       </marker>
+     </defs>
+   - Draw coordinate axes with marker-end="url(#arrow)" (stroke="#3f3f46", stroke-width="2.5").
+   - Add clean, readable axis labels ('x', 'y', etc.) with clear, legible font size (e.g. font-size="18px" or "20px") and text-anchor.
+   - Use font-family="system-ui, -apple-system, sans-serif" for all <text> elements.
+
+4. MATHEMATICAL CURVES & GEOMETRY:
+   - Use smooth bezier paths (<path d="...">) or standard primitives (<line>, <circle>, <polygon>, <path>) for functions and geometric shapes.
+   - Use stroke-width="3" or "3.5" for main curves, stroke-width="2" for subsidiary lines or grids.
+   - For dashed or dotted lines (asymptotes, guidelines), use stroke-dasharray="6,4".
+   - Ensure the diagram artwork is scaled generously within the viewBox.
+
+5. BACKGROUND:
+   - Add a clean background rectangle with rounded corners: <rect width="100%" height="100%" fill="#ffffff" rx="12"/> to ensure readability on any background.
+
+6. OUTPUT FORMAT:
+   - Return ONLY the raw valid <svg ...> ... </svg> code.
+   - Do NOT include markdown code fences (no \`\`\`xml or \`\`\`svg blocks).
+   - Do NOT include any explanations or conversational chatter.` }
+        ]
+      },
+      config: {
+        temperature: 0.1,
+        ...((model.includes('pro') || model.includes('3.8-flash') || model.includes('3.7-flash')) ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {})
+      }
+    });
+
+    let rawText = response.text?.trim() || "";
+    if (rawText.startsWith('```xml')) {
+      rawText = rawText.replace(/^```xml\n?/, '').replace(/\n?```$/, '');
+    } else if (rawText.startsWith('```svg')) {
+      rawText = rawText.replace(/^```svg\n?/, '').replace(/\n?```$/, '');
+    } else if (rawText.startsWith('```')) {
+      rawText = rawText.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    }
+
+    const svgMatch = rawText.match(/<svg[\s\S]*<\/svg>/i);
+    let cleanedSvg = svgMatch ? svgMatch[0] : rawText;
+
+    if (!cleanedSvg.includes('xmlns="http://www.w3.org/2000/svg"')) {
+      cleanedSvg = cleanedSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    // Ensure responsive attributes
+    if (!cleanedSvg.includes('width=')) {
+      cleanedSvg = cleanedSvg.replace('<svg', '<svg width="100%"');
+    }
+    if (!cleanedSvg.includes('height=')) {
+      cleanedSvg = cleanedSvg.replace('<svg', '<svg height="auto"');
+    }
+
+    const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanedSvg)}`;
+    const tokenCount = response.usageMetadata?.totalTokenCount || 0;
+
+    return {
+      svg: cleanedSvg,
+      dataUri,
+      tokenCount
+    };
+  } catch (error: any) {
+    console.error('Vector SVG generation error:', error);
+    if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash') {
+      console.warn(`Retrying generateSvgDiagramFromImage with fallback`);
+      return generateSvgDiagramFromImage(base64Image, caption, alt, 'gemini-3.5-flash' as any);
     }
     throw error;
   }

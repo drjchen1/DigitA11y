@@ -50,7 +50,7 @@ export const MathEditorModal: React.FC<MathEditorModalProps> = ({ initialHtml, o
 
   const updateToken = (index: number, newContent: string) => {
     const newTokens = [...tokens];
-    newTokens[index].content = newContent;
+    newTokens[index] = { ...newTokens[index], content: newContent };
     setTokens(newTokens);
   };
 
@@ -88,8 +88,8 @@ export const MathEditorModal: React.FC<MathEditorModalProps> = ({ initialHtml, o
           </div>
         </div>
         
-        <div className="flex-1 flex min-h-0">
-          <div className="w-1/3 border-r border-zinc-100 bg-zinc-50/30 flex flex-col h-full">
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-y-auto md:overflow-hidden">
+          <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-zinc-100 bg-zinc-50/30 flex flex-col max-h-48 md:max-h-none md:h-full shrink-0">
             <div className="p-4 border-b border-zinc-100 bg-white flex-shrink-0">
               <h3 className="text-xs font-black text-zinc-400 tracking-widest uppercase">Equations Found ({mathTokensOnly.length})</h3>
             </div>
@@ -114,7 +114,7 @@ export const MathEditorModal: React.FC<MathEditorModalProps> = ({ initialHtml, o
             </div>
           </div>
           
-          <div className="w-2/3 flex flex-col bg-white h-full">
+          <div className="w-full md:w-2/3 flex flex-col bg-white h-full min-h-0">
             <div className="h-1/2 border-b border-zinc-100 flex flex-col">
               <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex-shrink-0">
                 <h3 className="text-xs font-black text-zinc-400 tracking-widest uppercase">Edit LaTeX</h3>

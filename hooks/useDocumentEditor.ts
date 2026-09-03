@@ -31,6 +31,7 @@ export const useDocumentEditor = (
           const cleanAlt = cleanAltText(newAlt || updatedFig.alt);
           img.setAttribute('src', newSrc);
           img.setAttribute('alt', cleanAlt);
+          img.setAttribute('class', 'max-w-full h-auto object-contain block mx-auto max-h-[350px] p-2');
           figure.setAttribute('aria-label', `Visual figure: ${cleanAlt}`);
           
           let figcaption = figure.querySelector('figcaption');
