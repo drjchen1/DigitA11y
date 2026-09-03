@@ -10,7 +10,7 @@ import { optimizeImageForGemini } from '../utils/imageOptimizer';
 const DYNAMIC_REASONING_STEPS = [
   "Analyzing visual hierarchy & math layout...",
   "Transcribing handwritten notes & math symbols...",
-  "Generating accessible KaTeX equations...",
+  "Generating accessible LaTeX equations...",
   "Structuring accessible tables & semantic headings...",
   "Detecting figures & synthesizing alt descriptions...",
   "Refining document structure for screen readers..."

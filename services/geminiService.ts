@@ -345,7 +345,7 @@ STRICT ARCHITECTURAL & COMPLIANCE RULES:
 1. MATHEMATICAL FORMULA INTEGRITY:
    - All formulas MUST strictly preserve their LaTeX delimiters: \\( ... \\) for inline math and \\[ ... \\] for display math.
    - NEVER alter, remove, escape, or unescape LaTeX backslashes or macros (e.g. \\frac, \\sum, \\int, \\aligned, \\sqrt).
-   - NEVER touch or modify MathJax/KaTeX elements (<mjx-container>, <math>) if present.
+   - NEVER touch or modify MathJax/LaTeX elements (<mjx-container>, <math>) if present.
 
 2. ISSUE-SPECIFIC REMEDIATION PATTERNS:
    - Heading Order (1.3.1): Re-sequence heading tags (<h1>, <h2>, <h3>, <h4>) so they follow a strict hierarchical order without skipping levels (e.g., ensure an <h1> exists as primary title, followed by <h2>, then <h3>).
@@ -426,7 +426,7 @@ ${issuesSummary}
 
 STRICT REMEDIATION DIRECTIVES:
 1. PRESERVE MATHEMATICS:
-   - All math formulas MUST keep their exact KaTeX delimiters: \\( ... \\) for inline math and \\[ ... \\] for display math.
+   - All math formulas MUST keep their exact LaTeX delimiters: \\( ... \\) for inline math and \\[ ... \\] for display math.
    - Do NOT unescape, alter, or remove LaTeX expressions or backslashes.
    - Do NOT touch <mjx-container> or <math> elements.
 

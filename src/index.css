@@ -8,6 +8,17 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  .animate-spin-slow {
+    animation: spin-slow 24s linear infinite;
+  }
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
 
 @layer components {
