@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ModelType, ThinkingLevelType, MultiFileMode } from '../types';
+import { ModelType, ThinkingLevelType, MultiFileMode, MathAnnotationStyle } from '../types';
 import CapybaraLogo from './CapybaraLogo';
 import { 
   Sparkles, 
@@ -15,7 +15,9 @@ import {
   ChevronDown, 
   SlidersHorizontal,
   Check,
-  Layers
+  Layers,
+  List,
+  Braces
 } from 'lucide-react';
 import { createSampleMathNoteFile } from '../utils/sampleData';
 
@@ -27,6 +29,8 @@ interface DashboardProps {
   onModelChange: (model: ModelType) => void;
   selectedThinkingLevel: ThinkingLevelType;
   onThinkingLevelChange: (level: ThinkingLevelType) => void;
+  mathAnnotationStyle: MathAnnotationStyle;
+  onMathAnnotationStyleChange: (style: MathAnnotationStyle) => void;
   multiFileMode: MultiFileMode;
   onMultiFileModeChange: (mode: MultiFileMode) => void;
 }
@@ -39,6 +43,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onModelChange,
   selectedThinkingLevel,
   onThinkingLevelChange,
+  mathAnnotationStyle,
+  onMathAnnotationStyleChange,
   multiFileMode,
   onMultiFileModeChange
 }) => {
@@ -207,13 +213,15 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <span className="text-zinc-400 font-normal">·</span>
             <span className="text-zinc-600">{thinkingShortName}</span>
+            <span className="text-zinc-400 font-normal">·</span>
+            <span className="text-zinc-600">{mathAnnotationStyle === 'visual-underbraces' ? 'Underbraces' : 'Clean Math'}</span>
             <ChevronDown size={13} className={`text-zinc-500 transition-transform duration-200 ${isConfigOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Settings Dropdown Popover / Modal (Touch friendly on mobile) */}
           {isConfigOpen && (
             <div 
-              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[320px] sm:w-[360px] bg-white border border-zinc-200/90 rounded-2xl shadow-xl p-4 text-left z-50 animate-in fade-in zoom-in-95 duration-150"
+              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[340px] sm:w-[390px] bg-white border border-zinc-200/90 rounded-2xl shadow-xl p-4 text-left z-50 animate-in fade-in zoom-in-95 duration-150"
               role="dialog"
               aria-label="AI Model and Reasoning Settings"
             >
@@ -339,6 +347,62 @@ const Dashboard: React.FC<DashboardProps> = ({
                   {selectedThinkingLevel === 'LOW' && 'Fast: Minimal reasoning latency for standard notes and lectures.'}
                   {selectedThinkingLevel === 'HIGH' && 'Deep: Extended mathematical verification for complex proofs and diagrams.'}
                 </p>
+              </div>
+
+              {/* Math Annotation Style Choice */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider">
+                    Math Annotation Style
+                  </label>
+                  <span className="text-[10px] text-indigo-600 font-semibold">
+                    {mathAnnotationStyle === 'clean-breakdown' ? 'Clean "where:" list' : 'Underbraces'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onMathAnnotationStyleChange('clean-breakdown')}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      mathAnnotationStyle === 'clean-breakdown'
+                        ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 ring-1 ring-indigo-600/30'
+                        : 'border-zinc-200 hover:border-zinc-300 text-zinc-700 bg-zinc-50/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
+                        <List size={13} className="text-indigo-600" />
+                        <span>Clean Breakdown</span>
+                      </div>
+                      {mathAnnotationStyle === 'clean-breakdown' && <Check size={13} className="text-indigo-700" />}
+                    </div>
+                    <span className="text-[10px] text-zinc-600 leading-tight">
+                      Formulas stay natural & compact; definitions formatted in clean "where:" list below.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onMathAnnotationStyleChange('visual-underbraces')}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      mathAnnotationStyle === 'visual-underbraces'
+                        ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 ring-1 ring-indigo-600/30'
+                        : 'border-zinc-200 hover:border-zinc-300 text-zinc-700 bg-zinc-50/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
+                        <Braces size={13} className="text-indigo-600" />
+                        <span>Visual Underbraces</span>
+                      </div>
+                      {mathAnnotationStyle === 'visual-underbraces' && <Check size={13} className="text-indigo-700" />}
+                    </div>
+                    <span className="text-[10px] text-zinc-600 leading-tight">
+                      Direct LaTeX \underbrace curly brackets positioned under symbols.
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {/* Multi-File Mode */}

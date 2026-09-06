@@ -137,6 +137,13 @@ export const normalizeMathSpacing = (content: string): string => {
     return `\\text{${cleaned}}`;
   });
 
+  // 4. Prevent giant vertically-stretched delimiters around underbrace expressions:
+  // When \left( and \right) enclose \underbrace, KaTeX stretches them vertically across the footnote labels.
+  // Converting to \bigl( and \bigr) preserves natural baseline-anchored parentheses.
+  out = out.replace(/\\left\(([^\n]*?\\underbrace[^\n]*?)\\right\)/g, (_m, inner) => {
+    return `\\bigl(${inner}\\bigr)`;
+  });
+
   return out;
 };
 

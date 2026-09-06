@@ -1,9 +1,9 @@
 
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
-import { GeminiPageResponse, BatchResponse, ModelType } from "../types";
+import { GeminiPageResponse, BatchResponse, ModelType, MathAnnotationStyle } from "../types";
 import beautify from "js-beautify";
 
-const getSystemInstruction = () => {
+const getSystemInstruction = (mathAnnotationStyle: MathAnnotationStyle = "clean-breakdown") => {
   return `
 You are a world-class specialist in mathematics education and web accessibility (WCAG 2.2 AA). 
 Your task is to convert scanned handwritten mathematics lecture notes into a high-fidelity, accessible HTML document.
@@ -34,15 +34,32 @@ Rules:
      - '\\begin{aligned} ... \\end{aligned}' with '&' alignment anchors and '\\\\' line breaks.
      - Piecewise formulas and case definitions: '\\begin{cases} ... \\end{cases}'.
      - Matrices and vectors: '\\begin{pmatrix} ... \\end{pmatrix}' or '\\begin{bmatrix} ... \\end{bmatrix}' or determinants '\\begin{vmatrix} ... \\end{vmatrix}'.
-   - UNDERBRACES, OVERBRACES & MATH ANNOTATIONS (CRITICAL):
-     - Use \\underbrace{expression}_{\text{label}} (or \\overbrace{expression}^{\text{label}}) to represent curly brackets under or over math expressions.
-     - AVOIDING AWKWARD SPACING GAPS: By default, a long text label under an \\underbrace forces the surrounding math to space out to accommodate the text width. This creates ugly gaps (e.g. x \\underbrace{(a-py)}_{\\text{long text}}). To fix this, you MUST shrink the width of the label.
-     - METHOD 1 (PREFERRED): Break the long text into a narrow multi-line stack using \\substack with \\text{...} on each line: \\underbrace{k}_{\\substack{\\text{constant of proportionality} \\\\ \\text{(\"is proportional to\")}}}. This maintains a reasonable bounding box while preventing ugly gaps.
-     - METHOD 2 (ISOLATED TERMS ONLY): You may use \\mathclap{\\text{...}} to completely zero out the width (e.g. x \\underbrace{(a-py)}_{\\mathclap{\\text{act as reduction to growth rate}}}). However, NEVER use \\mathclap if there are multiple adjacent underbraces on the same line, as the text labels will collide and overlap.
-     - FOR ALL WORDS IN MATH / BRACES: ALWAYS wrap English words inside \\text{...} (e.g., \\underbrace{(y')}_{\\text{coeff. } y' \\text{ contains } y'}} or \\underbrace{\\sin y}_{\\text{this makes the eq. nonlinear}}).
-     - NEVER place plain English words directly into math mode without \\text{...} (e.g., NEVER write $is proportional to$; write definitions like 'k: Constant of proportionality ("is proportional to")' in regular HTML text, or wrap words inside \\text{...} if in math).
+${mathAnnotationStyle === 'visual-underbraces' ? `   - MATHEMATICAL ANNOTATIONS & UNDERBRACES (VISUAL UNDERBRACE MODE):
+     - When handwritten notes feature explanatory phrases, curly brackets, or notes beneath math terms or variables:
+       - Transcribe the underbraces directly beneath the mathematical symbols using LaTeX \\underbrace{expression}_{\text{label}} (or \\overbrace{expression}^{\text{label}}).
+       - NARROW MULTI-LINE STACKS FOR LABELS: If an underbrace label contains multiple words or is descriptive, break it into a narrow multi-line stack using \\substack with \\text{...} on each line:
+         \\underbrace{k}_{\\substack{\\text{constant of} \\\\ \\text{proportionality}}}
+         This keeps the horizontal width bounded and prevents massive spacing gaps between surrounding math symbols.
+       - AVOID GIANT DELIMITERS: NEVER wrap \\left( and \\right) around an expression containing \\underbrace. Use standard parentheses ( ... ) or \\bigl( ... \\bigr) so delimiters do not stretch vertically over the underbrace.
+       - FOR ALL WORDS IN MATH / BRACES: ALWAYS wrap English words inside \\text{...}. NEVER place plain English words directly into math mode without \\text{...}.
+       - NO ARTIFICIAL SPACING BETWEEN VARIABLES: NEVER insert artificial wide spacing (like \\quad, \\qquad, \\;, \\ , or hard spaces) between variables, coefficients, and parenthesized terms.
+       - TIGHT, NATURAL OPERATOR SPACING: Maintain compact, natural mathematical spacing between terms and operators.` : `   - MATHEMATICAL ANNOTATIONS, UNDERBRACES & EXPLANATORY LABELS (CLEAN BREAKDOWN MODE - RECOMMENDED):
+     - When handwritten notes feature explanatory phrases, descriptions, or comments beneath symbols (especially multi-symbol expressions like \\((r, \\theta)\\), coordinate pairs, equations with multiple labeled parameters, or terms with long notes):
+       - DO NOT put long explanatory phrases inside \\underbrace in the equation line! Doing so forces the math symbols apart with awkward horizontal gaps and stretches surrounding parentheses into giant vertical brackets.
+       - INSTEAD: Write the clean, natural mathematical formula first (e.g., \\[ (r, \\theta) \\] or inline \\((r, \\theta)\\)), and immediately follow it with an accessible \"where:\" definition list or breakdown in HTML:
+         <p class="text-sm font-semibold text-slate-700 mt-2 mb-1">where:</p>
+         <ul class="list-disc list-outside ml-6 space-y-1 text-sm text-slate-700">
+           <li>\\( r \\): displacement from origin</li>
+           <li>\\( \\theta \\): angle of line through origin and the point</li>
+         </ul>
+       - Or if in continuous prose: \"where \\( r \\) is the displacement from origin, and \\( \\theta \\) is the angle of the line through the origin and the point.\"
+     - STRICT LIMITS ON \\underbrace:
+       - ONLY use \\underbrace{expr}_{\\text{label}} when the label is an ultra-short, 1-to-2-word tag on an isolated term (e.g., \\underbrace{k}_{\\text{rate}} or \\underbrace{y'}_{\\text{nonlinear}}).
+       - NEVER use \\underbrace for multiple adjacent terms on the same line (such as \\( ( \\underbrace{r}_{\\dots}, \\underbrace{\\theta}_{\\dots} ) \\)). ALWAYS use the clean formula + \"where:\" definition list instead.
+       - NEVER wrap \\left( and \\right) around an \\underbrace, because LaTeX stretches the parentheses vertically to encompass the text label below. Use standard parentheses ( ... ) or \\bigl( ... \\bigr).
+     - FOR ALL WORDS IN MATH / BRACES: If an underbrace is used for a short tag, ALWAYS wrap English words inside \\text{...}. NEVER place plain English words directly into math mode without \\text{...}.
      - NO ARTIFICIAL SPACING BETWEEN VARIABLES: You MUST NEVER insert artificial wide spacing (like \\quad, \\qquad, \\;, \\ , or hard spaces) between variables, coefficients, and parenthesized terms. For example, write x(a-py) exactly, NEVER x \\quad (a-py) or x \\ (a-py).
-     - TIGHT, NATURAL OPERATOR SPACING: Maintain compact, natural mathematical spacing between terms and operators (e.g., y'' + \\underbrace{(y')}_{\\text{coeff. } y' \\text{ contains } y'}} y' + y = 0 or y'' + \\underbrace{\\sin y}_{\\text{this makes the eq. nonlinear}} = 0) without inserting artificial \\quad, \\qquad, or wide gaps between words.
+     - TIGHT, NATURAL OPERATOR SPACING: Maintain compact, natural mathematical spacing between terms and operators without inserting artificial \\quad, \\qquad, or wide gaps between words.`}
    - Ensure backslashes are present for all functions (e.g., \\sin, \\cos, \\log, \\ln, \\sqrt, \\int, \\sum, \\lim, \\times, \\partial).
    - Double check that delimiters (\\( \\), \\[ \\]) and brackets are fully closed.
 
@@ -118,7 +135,7 @@ CRITICAL: Return ONLY the JSON object.
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.8-flash', thinkingLevelStr: string = 'LOW', retries = 3, onModelFallback?: (fallbackModel: ModelType) => void): Promise<{text: string, tokenCount: number, actualModel: ModelType}> {
+async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.8-flash', thinkingLevelStr: string = 'LOW', retries = 3, onModelFallback?: (fallbackModel: ModelType) => void, mathAnnotationStyle: MathAnnotationStyle = 'clean-breakdown'): Promise<{text: string, tokenCount: number, actualModel: ModelType}> {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { headers: { 'User-Agent': 'aistudio-build' } } });
   
   for (let i = 0; i < retries; i++) {
@@ -160,7 +177,7 @@ async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: nu
         model: model,
         contents: { parts },
         config: {
-          systemInstruction: getSystemInstruction() + "\nIMPORTANT: Return a JSON object with a 'pages' property containing an array of page results. Each page result must have 'title', 'html', 'figures', and 'semanticTags' properties.",
+          systemInstruction: getSystemInstruction(mathAnnotationStyle) + "\nIMPORTANT: Return a JSON object with a 'pages' property containing an array of page results. Each page result must have 'title', 'html', 'figures', and 'semanticTags' properties.",
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -238,7 +255,7 @@ async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: nu
       if (model === 'gemini-3.8-flash' || model === 'gemini-3.7-flash' || model === 'gemini-3.1-pro-preview') {
         console.warn(`Attempting fallback to gemini-3.5-flash due to error with ${model}:`, error);
         if (onModelFallback) onModelFallback('gemini-3.5-flash' as any);
-        return callBatchGeminiWithRetry(images, 'gemini-3.5-flash' as any, thinkingLevelStr, retries, onModelFallback);
+        return callBatchGeminiWithRetry(images, 'gemini-3.5-flash' as any, thinkingLevelStr, retries, onModelFallback, mathAnnotationStyle);
       }
       throw error;
     }
@@ -246,10 +263,10 @@ async function callBatchGeminiWithRetry(images: { base64: string, pageNumber: nu
   throw new Error("Max retries exceeded");
 }
 
-export const convertBatchToHtml = async (images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.8-flash', thinkingLevelStr: string = 'LOW', onModelFallback?: (fallbackModel: ModelType) => void): Promise<BatchResponse> => {
+export const convertBatchToHtml = async (images: { base64: string, pageNumber: number }[], model: ModelType = 'gemini-3.8-flash', thinkingLevelStr: string = 'LOW', onModelFallback?: (fallbackModel: ModelType) => void, mathAnnotationStyle: MathAnnotationStyle = 'clean-breakdown'): Promise<BatchResponse> => {
   let result = { text: "", tokenCount: 0, actualModel: model };
   try {
-    result = await callBatchGeminiWithRetry(images, model, thinkingLevelStr, 3, onModelFallback);
+    result = await callBatchGeminiWithRetry(images, model, thinkingLevelStr, 3, onModelFallback, mathAnnotationStyle);
     const parsed = JSON.parse(result.text);
     
     if (parsed.pages) {

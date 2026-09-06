@@ -1,5 +1,6 @@
 import React from 'react';
-import { ConversionResult, LayoutMode, AccessibilityAudit } from '../types';
+import { ConversionResult, LayoutMode, AccessibilityAudit, MathAnnotationStyle } from '../types';
+import { List, Braces } from 'lucide-react';
 
 interface ResultsSidebarProps {
   results: ConversionResult[];
@@ -16,6 +17,8 @@ interface ResultsSidebarProps {
   isProcessing: boolean;
   onReset: () => void;
   onOpenMetadataModal?: () => void;
+  mathAnnotationStyle?: MathAnnotationStyle;
+  onMathAnnotationStyleChange?: (style: MathAnnotationStyle) => void;
 }
 
 export const ResultsSidebar: React.FC<ResultsSidebarProps> = ({
@@ -32,7 +35,9 @@ export const ResultsSidebar: React.FC<ResultsSidebarProps> = ({
   onReprocessAll,
   isProcessing,
   onReset,
-  onOpenMetadataModal
+  onOpenMetadataModal,
+  mathAnnotationStyle = 'clean-breakdown',
+  onMathAnnotationStyleChange
 }) => {
   const currentResult = results[activeTab];
   const tags = currentResult?.semanticTags;
@@ -174,6 +179,46 @@ export const ResultsSidebar: React.FC<ResultsSidebarProps> = ({
                <span>{showAnnotations ? `Hide Margin Notes (${displayMarginNotesCount})` : `Margin Notes (${displayMarginNotesCount})`}</span>
              </button>
            </div>
+
+           {onMathAnnotationStyleChange && (
+             <div className="pt-2 mt-2 border-t border-zinc-200/60">
+               <div className="flex items-center justify-between mb-1.5">
+                 <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Annotation Style</span>
+                 <span className="text-[9px] font-semibold text-indigo-700">
+                   {mathAnnotationStyle === 'clean-breakdown' ? 'Clean "where:"' : 'Underbraces'}
+                 </span>
+               </div>
+               <div className="grid grid-cols-2 gap-1 bg-zinc-100/80 p-1 rounded-xl">
+                 <button
+                   type="button"
+                   onClick={() => onMathAnnotationStyleChange('clean-breakdown')}
+                   className={`py-1.5 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                     mathAnnotationStyle === 'clean-breakdown'
+                       ? 'bg-white text-zinc-900 shadow-2xs'
+                       : 'text-zinc-600 hover:text-zinc-900'
+                   }`}
+                   title="Compact formulas with 'where:' definition lists below"
+                 >
+                   <List size={11} className={mathAnnotationStyle === 'clean-breakdown' ? 'text-indigo-600' : ''} />
+                   <span>Clean</span>
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => onMathAnnotationStyleChange('visual-underbraces')}
+                   className={`py-1.5 px-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                     mathAnnotationStyle === 'visual-underbraces'
+                       ? 'bg-white text-zinc-900 shadow-2xs'
+                       : 'text-zinc-600 hover:text-zinc-900'
+                   }`}
+                   title="Inline LaTeX \underbrace curly braces under symbols"
+                 >
+                   <Braces size={11} className={mathAnnotationStyle === 'visual-underbraces' ? 'text-indigo-600' : ''} />
+                   <span>Underbrace</span>
+                 </button>
+               </div>
+             </div>
+           )}
+
            <button 
               onClick={onReprocessAll}
               disabled={isProcessing}

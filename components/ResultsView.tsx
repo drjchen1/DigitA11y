@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ConversionResult, LayoutMode } from '../types';
+import { ConversionResult, LayoutMode, MathAnnotationStyle } from '../types';
 import { generateHtmlDocument } from '../utils/exportHtml';
 import { MathEditorModal } from "./MathEditorModal";
 import { ResultsSidebar } from "./ResultsSidebar";
@@ -32,6 +32,8 @@ interface ResultsViewProps {
   setIsReadingMode?: (val: boolean) => void;
   onToggleToc?: () => void;
   onOpenMetadataModal?: () => void;
+  mathAnnotationStyle?: MathAnnotationStyle;
+  onMathAnnotationStyleChange?: (style: MathAnnotationStyle) => void;
 }
 
 const ResultsView: React.FC<ResultsViewProps> = ({
@@ -57,7 +59,9 @@ const ResultsView: React.FC<ResultsViewProps> = ({
   lineHeight = 'normal',
   setIsReadingMode,
   onToggleToc,
-  onOpenMetadataModal
+  onOpenMetadataModal,
+  mathAnnotationStyle = 'clean-breakdown',
+  onMathAnnotationStyleChange
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [showAnnotations, setShowAnnotations] = useState(false);
@@ -210,6 +214,8 @@ const ResultsView: React.FC<ResultsViewProps> = ({
           isProcessing={isProcessing}
           onReset={onReset}
           onOpenMetadataModal={onOpenMetadataModal}
+          mathAnnotationStyle={mathAnnotationStyle}
+          onMathAnnotationStyleChange={onMathAnnotationStyleChange}
         />
       )}
 
@@ -233,6 +239,8 @@ const ResultsView: React.FC<ResultsViewProps> = ({
               onReset={onReset}
               onToggleToc={onToggleToc}
               onOpenMetadataModal={onOpenMetadataModal}
+              mathAnnotationStyle={mathAnnotationStyle}
+              onMathAnnotationStyleChange={onMathAnnotationStyleChange}
             />
           )}
 

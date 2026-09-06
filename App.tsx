@@ -36,6 +36,7 @@ const App: React.FC = () => {
     updatePageHtml,
     setModel,
     setThinkingLevel,
+    setMathAnnotationStyle,
     reset
   } = useDigitization(incrementUsage);
 
@@ -360,13 +361,15 @@ const App: React.FC = () => {
 
         {!state.results.length && !state.isProcessing ? (
           <Dashboard 
-            onFileUpload={(files) => handleFileUpload(files, state.selectedModel, state.selectedThinkingLevel)} 
+            onFileUpload={(files) => handleFileUpload(files, state.selectedModel, state.selectedThinkingLevel, state.mathAnnotationStyle)} 
             isProcessing={state.isProcessing} 
             onShowDocs={() => setShowHelp(true)}
             selectedModel={state.selectedModel}
             onModelChange={setModel}
             selectedThinkingLevel={state.selectedThinkingLevel}
             onThinkingLevelChange={setThinkingLevel}
+            mathAnnotationStyle={state.mathAnnotationStyle}
+            onMathAnnotationStyleChange={setMathAnnotationStyle}
             multiFileMode={multiFileMode}
             onMultiFileModeChange={setMultiFileMode}
           />
@@ -384,8 +387,8 @@ const App: React.FC = () => {
             onReset={handleReset}
             layoutMode={layoutMode}
             setLayoutMode={setLayoutMode}
-            onReprocessPage={(index) => reprocessPage(index, state.selectedModel, state.selectedThinkingLevel)}
-            onReprocessAll={() => originalFiles && originalFiles.length > 0 && handleFileUpload(originalFiles, state.selectedModel, state.selectedThinkingLevel)}
+            onReprocessPage={(index) => reprocessPage(index, state.selectedModel, state.selectedThinkingLevel, state.mathAnnotationStyle)}
+            onReprocessAll={() => originalFiles && originalFiles.length > 0 && handleFileUpload(originalFiles, state.selectedModel, state.selectedThinkingLevel, state.mathAnnotationStyle)}
             isProcessing={state.isProcessing}
             onUpdateHtml={updatePageHtml}
             isReadingMode={isReadingMode}
@@ -396,6 +399,8 @@ const App: React.FC = () => {
             setIsReadingMode={setIsReadingMode}
             onToggleToc={() => setIsTocOpen(!isTocOpen)}
             onOpenMetadataModal={() => setShowMetadataModal(true)}
+            mathAnnotationStyle={state.mathAnnotationStyle}
+            onMathAnnotationStyleChange={setMathAnnotationStyle}
           />
         </Suspense>
         )}

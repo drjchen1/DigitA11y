@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LayoutMode } from '../types';
+import { LayoutMode, MathAnnotationStyle } from '../types';
 import { 
   Eye, 
   Code, 
@@ -12,7 +12,8 @@ import {
   ChevronDown, 
   Check,
   FileText,
-  List
+  List,
+  Braces
 } from 'lucide-react';
 
 interface ResultsToolbarProps {
@@ -32,6 +33,8 @@ interface ResultsToolbarProps {
   onReset: () => void;
   onToggleToc?: () => void;
   onOpenMetadataModal?: () => void;
+  mathAnnotationStyle?: MathAnnotationStyle;
+  onMathAnnotationStyleChange?: (style: MathAnnotationStyle) => void;
 }
 
 export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
@@ -50,7 +53,9 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
   onDownloadHtml,
   onReset,
   onToggleToc,
-  onOpenMetadataModal
+  onOpenMetadataModal,
+  mathAnnotationStyle = 'clean-breakdown',
+  onMathAnnotationStyleChange
 }) => {
   const [pageDropdownOpen, setPageDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -259,12 +264,48 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
               <button
                 onClick={() => onReprocessPage(activeTab)}
                 disabled={isProcessing}
-                className="p-1 rounded-lg text-amber-700 hover:bg-amber-50 disabled:opacity-40 transition-all"
-                title="Reprocess this page with AI"
+                className="p-1 rounded-lg text-amber-700 hover:bg-amber-50 disabled:opacity-40 transition-all cursor-pointer"
+                title={`Reprocess page ${activeTab + 1} with AI using ${mathAnnotationStyle === 'clean-breakdown' ? 'Clean Breakdown' : 'Visual Underbraces'}`}
                 aria-label="Reprocess page"
               >
                 <RotateCw size={13} className={isProcessing ? "animate-spin text-amber-600" : ""} />
               </button>
+
+              {/* Math Annotation Style Quick Switch */}
+              {onMathAnnotationStyleChange && (
+                <>
+                  <div className="w-px h-3.5 bg-zinc-200 mx-0.5" />
+                  <button
+                    onClick={() => {
+                      const next = mathAnnotationStyle === 'clean-breakdown' ? 'visual-underbraces' : 'clean-breakdown';
+                      onMathAnnotationStyleChange(next);
+                    }}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                      mathAnnotationStyle === 'visual-underbraces'
+                        ? 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+                        : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                    }`}
+                    title={
+                      mathAnnotationStyle === 'clean-breakdown'
+                        ? 'Math Style: Clean Breakdown ("where:" lists). Click to switch to Visual Underbraces.'
+                        : 'Math Style: Visual Underbraces (\\underbrace). Click to switch to Clean Breakdown.'
+                    }
+                    aria-label="Toggle Math Annotation Style"
+                  >
+                    {mathAnnotationStyle === 'clean-breakdown' ? (
+                      <>
+                        <List size={12} className="text-indigo-600" />
+                        <span className="hidden sm:inline">Clean Math</span>
+                      </>
+                    ) : (
+                      <>
+                        <Braces size={12} className="text-amber-700" />
+                        <span className="hidden sm:inline">Underbraces</span>
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
 
               {/* Jump-to-page Popover Menu */}
               {pageDropdownOpen && resultsLength > 1 && (

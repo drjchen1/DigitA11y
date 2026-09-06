@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { AppState, ConversionResult, ModelType, ThinkingLevelType } from '../types';
+import { AppState, ConversionResult, ModelType, ThinkingLevelType, MathAnnotationStyle } from '../types';
 import { pdfToImageData } from '../services/pdfService';
 import { convertBatchToHtml } from '../services/geminiService';
 import { runAccessibilityAudit, enrichHtmlAccessibility, computeSemanticAccessibilityTags } from '../utils/accessibility';
@@ -52,7 +52,12 @@ export const useDocumentProcessing = (
   onApiCall?: () => void
 ) => {
 
-  const handleFileUpload = async (files: File[], model: ModelType = 'gemini-3.8-flash', thinkingLevel: ThinkingLevelType = 'AUTO') => {
+  const handleFileUpload = async (
+    files: File[], 
+    model: ModelType = 'gemini-3.8-flash', 
+    thinkingLevel: ThinkingLevelType = 'AUTO',
+    mathAnnotationStyle: MathAnnotationStyle = state.mathAnnotationStyle || 'clean-breakdown'
+  ) => {
     if (!files || files.length === 0) return;
 
     setOriginalFiles(files);
@@ -148,7 +153,7 @@ export const useDocumentProcessing = (
           try {
             batchResponses = await convertBatchToHtml(batchImages, model, thinkingLevel, (fallbackModel) => {
               setState(prev => ({ ...prev, actualModelUsed: fallbackModel }));
-            });
+            }, mathAnnotationStyle);
           } finally {
             stopReasoningTicker();
           }
@@ -308,7 +313,12 @@ export const useDocumentProcessing = (
     }
   };
 
-  const reprocessPage = async (pageIndex: number, model: ModelType = 'gemini-3.8-flash', thinkingLevel: ThinkingLevelType = 'AUTO') => {
+  const reprocessPage = async (
+    pageIndex: number, 
+    model: ModelType = 'gemini-3.8-flash', 
+    thinkingLevel: ThinkingLevelType = 'AUTO',
+    mathAnnotationStyle: MathAnnotationStyle = state.mathAnnotationStyle || 'clean-breakdown'
+  ) => {
     if (!originalFiles || originalFiles.length === 0) return;
     
     setState(prev => ({
@@ -365,7 +375,7 @@ export const useDocumentProcessing = (
       try {
         batchResponses = await convertBatchToHtml(batchImages, model, thinkingLevel, (fallbackModel) => {
           setState(prev => ({ ...prev, actualModelUsed: fallbackModel }));
-        });
+        }, mathAnnotationStyle);
       } finally {
         stopReasoningTicker();
       }

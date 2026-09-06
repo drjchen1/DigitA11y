@@ -15,6 +15,7 @@ export type ModelType = 'gemini-3.8-flash' | 'gemini-3.7-flash' | 'gemini-3.5-fl
 export type LayoutMode = 'paginated' | 'continuous';
 export type ThinkingLevelType = 'AUTO' | 'LOW' | 'HIGH' | 'NONE';
 export type MultiFileMode = 'combine' | 'separate';
+export type MathAnnotationStyle = 'clean-breakdown' | 'visual-underbraces';
 
 export interface Figure {
   id: string;
@@ -85,6 +86,7 @@ export interface AppState {
   totalTime?: number;
   selectedModel: ModelType;
   selectedThinkingLevel: ThinkingLevelType;
+  mathAnnotationStyle: MathAnnotationStyle;
   currentProcessingImages?: string[] | null;
   actualModelUsed?: ModelType;
 }
