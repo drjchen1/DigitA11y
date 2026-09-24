@@ -219,8 +219,8 @@ const ResultsView: React.FC<ResultsViewProps> = ({
         />
       )}
 
-      <div className={`flex-1 w-full flex flex-col ${isReadingMode ? 'max-w-4xl mx-auto' : ''}`}>
-        <div className="w-full max-w-none">
+      <div className={`flex-1 min-w-0 w-full flex flex-col ${isReadingMode ? 'max-w-4xl mx-auto' : ''}`}>
+        <div className="w-full min-w-0 max-w-none">
           {!isReadingMode && (
             <ResultsToolbar
               viewMode={viewMode}

@@ -397,3 +397,30 @@ export const replaceFigureInHtml = (html: string, figureId: string, figureHtml: 
 
   return doc.body.innerHTML;
 };
+
+/**
+ * Formats a figure title cleanly without duplicate "Figure:" prefixes.
+ */
+export const formatFigureTitle = (rawTitle: string): string => {
+  if (!rawTitle) return "Figure";
+  let title = rawTitle.trim();
+  // Strip duplicate repeated prefixes like "Figure: Figure:" or "Fig. Figure:"
+  title = title.replace(/^(?:(?:figure|fig\.?|diagram|illustration)\s*(?:\d+)?\s*[:.-]?\s*){2,}/i, 'Figure: ').trim();
+  if (/^(?:figure|fig\.?|diagram|illustration)\b/i.test(title)) {
+    return title;
+  }
+  return `Figure: ${title}`;
+};
+
+/**
+ * Formats a figure caption cleanly without duplicate "Figure:" prefixes.
+ */
+export const formatFigureCaption = (rawCaption: string): string => {
+  if (!rawCaption) return "Figure";
+  let caption = rawCaption.trim();
+  caption = caption.replace(/^(?:(?:figure|fig\.?|diagram|illustration)\s*(?:\d+)?\s*[:.-]?\s*){2,}/i, 'Figure: ').trim();
+  if (/^(?:figure|fig\.?|diagram|illustration)\b/i.test(caption)) {
+    return caption;
+  }
+  return `Figure: ${caption}`;
+};

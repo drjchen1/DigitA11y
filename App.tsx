@@ -37,6 +37,7 @@ const App: React.FC = () => {
     setModel,
     setThinkingLevel,
     setMathAnnotationStyle,
+    setPageProcessingMode,
     reset
   } = useDigitization(incrementUsage);
 
@@ -361,7 +362,7 @@ const App: React.FC = () => {
 
         {!state.results.length && !state.isProcessing ? (
           <Dashboard 
-            onFileUpload={(files) => handleFileUpload(files, state.selectedModel, state.selectedThinkingLevel, state.mathAnnotationStyle)} 
+            onFileUpload={(files) => handleFileUpload(files, state.selectedModel, state.selectedThinkingLevel, state.mathAnnotationStyle, state.pageProcessingMode)} 
             isProcessing={state.isProcessing} 
             onShowDocs={() => setShowHelp(true)}
             selectedModel={state.selectedModel}
@@ -370,6 +371,8 @@ const App: React.FC = () => {
             onThinkingLevelChange={setThinkingLevel}
             mathAnnotationStyle={state.mathAnnotationStyle}
             onMathAnnotationStyleChange={setMathAnnotationStyle}
+            pageProcessingMode={state.pageProcessingMode}
+            onPageProcessingModeChange={setPageProcessingMode}
             multiFileMode={multiFileMode}
             onMultiFileModeChange={setMultiFileMode}
           />

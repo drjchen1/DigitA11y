@@ -1027,6 +1027,16 @@ export const generateHtmlDocument = (
             border-top: 1px solid #e2e8f0;
         }
 
+        .math-content details[open] .figure-details-chevron {
+            transform: rotate(180deg);
+        }
+
+        .math-content details summary::-webkit-details-marker,
+        .math-content details summary::marker {
+            display: none !important;
+            content: "";
+        }
+
         /* Allow horizontal scrolling for wide math equations with scroll cues */
         .math-content mjx-container[display="true"] {
             max-width: 100% !important;
@@ -1152,10 +1162,65 @@ export const generateHtmlDocument = (
             margin: 1rem 0 !important;
         }
 
+        .print-title-page {
+            display: none;
+        }
+
         @media print {
             @page {
-                margin: 2cm;
+                size: auto;
+                margin: 20mm 15mm 22mm 15mm;
+
+                @top-left {
+                    content: "DigitA11y • Accessible STEM Notes";
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-size: 8pt;
+                    font-weight: 500;
+                    color: #64748b;
+                    border-bottom: 0.5pt solid #e2e8f0;
+                    padding-bottom: 4px;
+                }
+                @top-right {
+                    content: string(document-title, first);
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-size: 8pt;
+                    font-weight: 500;
+                    color: #64748b;
+                    border-bottom: 0.5pt solid #e2e8f0;
+                    padding-bottom: 4px;
+                }
+                @bottom-left {
+                    content: "WCAG 2.2 AA Compliant";
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-size: 8pt;
+                    color: #94a3b8;
+                }
+                @bottom-center {
+                    content: "Page " counter(page) " of " counter(pages);
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-size: 8.5pt;
+                    font-weight: 500;
+                    color: #475569;
+                }
+                @bottom-right {
+                    content: "Page " counter(page);
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-size: 8.5pt;
+                    font-weight: 600;
+                    color: #334155;
+                }
             }
+
+            @page :first {
+                margin: 0;
+                @top-left { content: none !important; border: none !important; }
+                @top-center { content: none !important; border: none !important; }
+                @top-right { content: none !important; border: none !important; }
+                @bottom-left { content: none !important; border: none !important; }
+                @bottom-center { content: none !important; border: none !important; }
+                @bottom-right { content: none !important; border: none !important; }
+            }
+
             * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -1163,6 +1228,7 @@ export const generateHtmlDocument = (
             body { 
                 background: white !important; 
                 color: #000000 !important;
+                counter-reset: doc-page 0;
             }
             /* Hide UI elements and interactive tools */
             .sidebar, .header, .page-badge, .no-print, .annotated-note-delete, 
@@ -1180,8 +1246,11 @@ export const generateHtmlDocument = (
                 margin: 0 !important;
                 display: block !important;
             }
-            /* Force page breaks */
+
+            /* Specific In-Flow Page Numbering (CSS Counters) */
             .page-article { 
+                counter-increment: doc-page;
+                position: relative;
                 box-shadow: none !important; 
                 border: none !important; 
                 padding: 0 !important; 
@@ -1189,6 +1258,152 @@ export const generateHtmlDocument = (
                 page-break-after: always !important;
                 break-after: page !important;
             }
+
+            .page-article::after {
+                content: "Page " counter(doc-page);
+                display: block !important;
+                text-align: right !important;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                font-size: 9pt !important;
+                font-weight: 600 !important;
+                color: #64748b !important;
+                padding-top: 1rem !important;
+                margin-top: 2.5rem !important;
+                border-top: 1px solid #e2e8f0 !important;
+                letter-spacing: 0.04em !important;
+            }
+
+            /* Suppress page number on title page */
+            .print-title-page::after {
+                display: none !important;
+                content: none !important;
+                border: none !important;
+                counter-increment: none !important;
+            }
+
+            /* Title Page Generation for Final Document Print Output */
+            .print-title-page {
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                align-items: center !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
+                width: 100% !important;
+                height: 100vh !important;
+                min-height: 100vh !important;
+                max-height: 100vh !important;
+                padding: 3.5cm 2.5cm 2.5cm 2.5cm !important;
+                margin: 0 !important;
+                page-break-before: avoid !important;
+                page-break-after: always !important;
+                break-before: avoid !important;
+                break-after: page !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            .print-title-page-frame {
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                height: 100% !important;
+                width: 100% !important;
+                max-width: 680px !important;
+                margin: 0 auto !important;
+                padding: 2.5rem 2rem !important;
+                border: 2px solid #0f172a !important;
+                border-radius: 12px !important;
+                box-sizing: border-box !important;
+            }
+
+            .title-page-badge {
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 0.5rem !important;
+                padding: 0.35rem 0.9rem !important;
+                border-radius: 9999px !important;
+                font-size: 8.5pt !important;
+                font-weight: 700 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.1em !important;
+                background-color: #f1f5f9 !important;
+                color: #334155 !important;
+                border: 1px solid #cbd5e1 !important;
+                margin-bottom: 1.5rem !important;
+            }
+
+            .title-page-title {
+                font-size: 26pt !important;
+                font-weight: 800 !important;
+                line-height: 1.25 !important;
+                color: #0f172a !important;
+                letter-spacing: -0.025em !important;
+                margin: 0 0 1rem 0 !important;
+                max-width: 100% !important;
+            }
+
+            .title-page-subtitle {
+                font-size: 13pt !important;
+                font-weight: 500 !important;
+                line-height: 1.5 !important;
+                color: #475569 !important;
+                margin: 0 0 2rem 0 !important;
+                max-width: 90% !important;
+            }
+
+            .title-page-divider {
+                width: 60px !important;
+                height: 3px !important;
+                background-color: #3b82f6 !important;
+                border: none !important;
+                margin: 0 auto 2rem auto !important;
+                border-radius: 2px !important;
+            }
+
+            .title-page-meta {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 0.6rem !important;
+                width: 100% !important;
+                max-width: 440px !important;
+                margin-top: auto !important;
+                padding-top: 1.5rem !important;
+                border-top: 1px solid #e2e8f0 !important;
+                font-size: 9.5pt !important;
+            }
+
+            .title-page-meta-row {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                width: 100% !important;
+                padding: 0.15rem 0 !important;
+            }
+
+            .title-page-meta-label {
+                font-weight: 600 !important;
+                color: #64748b !important;
+                text-transform: uppercase !important;
+                font-size: 8pt !important;
+                letter-spacing: 0.05em !important;
+            }
+
+            .title-page-meta-value {
+                font-weight: 600 !important;
+                color: #1e293b !important;
+            }
+
+            .title-page-footer {
+                margin-top: 1.5rem !important;
+                font-size: 8pt !important;
+                color: #94a3b8 !important;
+                letter-spacing: 0.02em !important;
+            }
+
             .math-content { 
                 font-size: 12pt !important; 
                 box-shadow: none !important; 
@@ -1677,6 +1892,41 @@ export const generateHtmlDocument = (
             </nav>
             `}
             <main id="main-content" tabindex="-1" class="content" style="padding-bottom: 12rem; outline: none;">
+                <!-- Document Title Page (Generated for Print/PDF Output) -->
+                <div class="print-title-page" aria-hidden="true">
+                    <div class="print-title-page-frame">
+                        <div class="title-page-badge">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <span>Accessible STEM Document</span>
+                        </div>
+                        <div>
+                            <h1 class="title-page-title">${escapeXml(effectiveTitle)}</h1>
+                            <p class="title-page-subtitle">${escapeXml(effectiveDescription)}</p>
+                            <div class="title-page-divider"></div>
+                        </div>
+                        <div class="title-page-meta">
+                            <div class="title-page-meta-row">
+                                <span class="title-page-meta-label">Total Document Pages</span>
+                                <span class="title-page-meta-value">${cleanResults.length} ${cleanResults.length === 1 ? 'Page' : 'Pages'}</span>
+                            </div>
+                            <div class="title-page-meta-row">
+                                <span class="title-page-meta-label">Date Transcribed</span>
+                                <span class="title-page-meta-value">${escapeXml(effectiveDate)}</span>
+                            </div>
+                            <div class="title-page-meta-row">
+                                <span class="title-page-meta-label">Accessibility Standard</span>
+                                <span class="title-page-meta-value">WCAG 2.2 AA • MathML & LaTeX</span>
+                            </div>
+                            <div class="title-page-meta-row">
+                                <span class="title-page-meta-label">Subject</span>
+                                <span class="title-page-meta-value">${escapeXml(effectiveSubject)}</span>
+                            </div>
+                        </div>
+                        <div class="title-page-footer">
+                            DigitA11y Accessible Transcription • High-contrast semantic markup
+                        </div>
+                    </div>
+                </div>
                 ${layoutMode === 'continuous' ? `
                 ${originalFileName ? `
                 <div class="no-print download-btn-wrapper" style="position: fixed; top: 2rem; right: 3rem; z-index: 50;">

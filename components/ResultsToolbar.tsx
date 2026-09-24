@@ -100,16 +100,16 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
   }, [layoutMode, resultsLength, activeTab, setActiveTab]);
 
   return (
-    <div className="sticky top-16 z-30 mb-6 bg-white/95 backdrop-blur-md border border-zinc-200/80 rounded-2xl px-3 py-2 shadow-xs transition-all overflow-visible">
-      <div className="flex items-center justify-between gap-2 py-0.5 relative overflow-visible">
+    <div className="sticky top-16 z-30 mb-6 bg-white/95 backdrop-blur-md border border-zinc-200/80 rounded-2xl px-3 py-2 shadow-xs transition-all w-full max-w-full overflow-visible">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-2 py-0.5 relative w-full">
         
         {/* ================= ZONE 1: DOCUMENT TOOLS & VIEWS (LEFT) ================= */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {/* Segmented View Mode: Preview vs Source */}
-          <div className="flex items-center bg-zinc-100/90 p-0.5 rounded-xl border border-zinc-200/60" role="group" aria-label="View Mode">
+          <div className="flex items-center bg-zinc-100/90 p-0.5 rounded-xl border border-zinc-200/60 shrink-0" role="group" aria-label="View Mode">
             <button
               onClick={() => setViewMode('preview')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'preview'
                   ? 'bg-white text-zinc-900 shadow-xs border border-zinc-200/60 font-bold'
                   : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50'
@@ -121,7 +121,7 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
             </button>
             <button
               onClick={() => setViewMode('source')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'source'
                   ? 'bg-white text-zinc-900 shadow-xs border border-zinc-200/60 font-bold'
                   : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50'
@@ -138,24 +138,24 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
           {/* Math Editor Trigger */}
           <button
             onClick={() => setEditingMathPageIndex(activeTab)}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
             title="Open visual Math & LaTeX editor"
           >
             <Sparkles size={13} className="text-indigo-600" />
-            <span className="hidden md:inline">Math Editor</span>
-            <span className="md:hidden">Math</span>
+            <span className="hidden 2xl:inline">Math Editor</span>
+            <span className="2xl:hidden">Math</span>
           </button>
 
           {/* Reading View Trigger */}
           {setIsReadingMode && (
             <button
               onClick={() => setIsReadingMode(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
               title="Enter distraction-free Reading View"
             >
               <BookOpen size={13} className="text-zinc-600" />
-              <span className="hidden md:inline">Reading View</span>
-              <span className="md:hidden">Read</span>
+              <span className="hidden 2xl:inline">Reading View</span>
+              <span className="2xl:hidden">Read</span>
             </button>
           )}
 
@@ -163,12 +163,12 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
           {onToggleToc && (
             <button
               onClick={onToggleToc}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
               title="Toggle Table of Contents"
             >
               <List size={13} className="text-zinc-600" />
-              <span className="hidden md:inline">Contents</span>
-              <span className="md:hidden">ToC</span>
+              <span className="hidden 2xl:inline">Contents</span>
+              <span className="2xl:hidden">ToC</span>
             </button>
           )}
 
@@ -176,12 +176,12 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
           {onOpenMetadataModal && (
             <button
               onClick={onOpenMetadataModal}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:text-indigo-900 bg-zinc-50 hover:bg-indigo-50/70 border border-zinc-200/80 hover:border-indigo-200 rounded-xl transition-all shadow-2xs shrink-0 cursor-pointer"
               title="Edit document properties & metadata (Author, Title, Subject)"
             >
               <FileText size={13} className="text-indigo-600" />
-              <span className="hidden lg:inline">Properties</span>
-              <span className="lg:hidden">Info</span>
+              <span className="hidden 2xl:inline">Properties</span>
+              <span className="2xl:hidden">Info</span>
             </button>
           )}
         </div>
@@ -192,7 +192,7 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
           <div className="flex items-center bg-zinc-100/90 p-0.5 rounded-xl border border-zinc-200/60" role="group" aria-label="Layout Flow Mode">
             <button
               onClick={() => setLayoutMode('paginated')}
-              className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 layoutMode === 'paginated'
                   ? 'bg-white text-zinc-900 shadow-xs border border-zinc-200/60 font-bold'
                   : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50'
@@ -203,7 +203,7 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
             </button>
             <button
               onClick={() => setLayoutMode('continuous')}
-              className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 layoutMode === 'continuous'
                   ? 'bg-white text-zinc-900 shadow-xs border border-zinc-200/60 font-bold'
                   : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50'
@@ -220,7 +220,7 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
               <button
                 onClick={() => setActiveTab(Math.max(0, activeTab - 1))}
                 disabled={activeTab === 0}
-                className="p-1 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                className="p-1 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
                 title="Previous Page (Left Arrow)"
                 aria-label="Previous Page"
               >
@@ -252,7 +252,7 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
               <button
                 onClick={() => setActiveTab(Math.min(resultsLength - 1, activeTab + 1))}
                 disabled={activeTab === resultsLength - 1}
-                className="p-1 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                className="p-1 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer"
                 title="Next Page (Right Arrow)"
                 aria-label="Next Page"
               >
@@ -295,12 +295,14 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
                     {mathAnnotationStyle === 'clean-breakdown' ? (
                       <>
                         <List size={12} className="text-indigo-600" />
-                        <span className="hidden sm:inline">Clean Math</span>
+                        <span className="hidden 2xl:inline">Clean Math</span>
+                        <span className="hidden sm:inline 2xl:hidden">Math</span>
                       </>
                     ) : (
                       <>
                         <Braces size={12} className="text-amber-700" />
-                        <span className="hidden sm:inline">Underbraces</span>
+                        <span className="hidden 2xl:inline">Underbraces</span>
+                        <span className="hidden sm:inline 2xl:hidden">Braces</span>
                       </>
                     )}
                   </button>
@@ -354,8 +356,8 @@ export const ResultsToolbar: React.FC<ResultsToolbarProps> = ({
             title="Download accessible standalone HTML"
           >
             <Download size={13} />
-            <span className="hidden sm:inline">Download HTML</span>
-            <span className="sm:hidden">Download</span>
+            <span className="hidden 2xl:inline">Download HTML</span>
+            <span className="2xl:hidden">Download</span>
           </button>
         </div>
 

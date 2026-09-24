@@ -236,6 +236,16 @@ export const generateSimplifiedHtmlDocument = (
             text-align: left;
         }
 
+        details[open] .figure-details-chevron {
+            transform: rotate(180deg);
+        }
+
+        details summary::-webkit-details-marker,
+        details summary::marker {
+            display: none !important;
+            content: "";
+        }
+
         /* Notes & Callouts */
         .auto-annotation, .note-box, .callout, .annotated-note, .margin-note, aside[role="note"] {
             background-color: #f8fafc;

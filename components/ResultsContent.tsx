@@ -50,6 +50,17 @@ export const ResultsContent: React.FC<ResultsContentProps> = ({
   articleClass,
   accessibilityStyle
 }) => {
+  const extractedTitle = React.useMemo(() => {
+    if (results.length > 0 && results[0]?.html) {
+      const match = results[0].html.match(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/i);
+      if (match && match[1]) {
+        const cleaned = match[1].replace(/<[^>]+>/g, '').trim();
+        if (cleaned) return cleaned;
+      }
+    }
+    return 'Mathematics Course Notes';
+  }, [results]);
+
   return (
     <>
       {viewMode === 'preview' ? (
@@ -61,6 +72,44 @@ export const ResultsContent: React.FC<ResultsContentProps> = ({
               : 'bg-[#FDFBF7] p-2 md:p-8 lg:p-12 rounded-3xl shadow-sm border border-zinc-100'
           }`}
         >
+          {/* Document Title Page (Generated for Print/PDF Output) */}
+          {results.length > 0 && (
+            <div className="print-title-page hidden print:flex" aria-hidden="true">
+              <div className="print-title-page-frame">
+                <div className="title-page-badge">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>Accessible STEM Document</span>
+                </div>
+                <div>
+                  <h1 className="title-page-title">{extractedTitle}</h1>
+                  <p className="title-page-subtitle">Digitized WCAG 2.2 AA Compliant Mathematical Transcription</p>
+                  <div className="title-page-divider"></div>
+                </div>
+                <div className="title-page-meta">
+                  <div className="title-page-meta-row">
+                    <span className="title-page-meta-label">Total Document Pages</span>
+                    <span className="title-page-meta-value">{results.length} {results.length === 1 ? 'Page' : 'Pages'}</span>
+                  </div>
+                  <div className="title-page-meta-row">
+                    <span className="title-page-meta-label">Date Transcribed</span>
+                    <span className="title-page-meta-value">{new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  </div>
+                  <div className="title-page-meta-row">
+                    <span className="title-page-meta-label">Accessibility Standard</span>
+                    <span className="title-page-meta-value">WCAG 2.2 AA • Screen-Reader Math</span>
+                  </div>
+                  <div className="title-page-meta-row">
+                    <span className="title-page-meta-label">Output Engine</span>
+                    <span className="title-page-meta-value">DigitA11y Multimodal Transcription</span>
+                  </div>
+                </div>
+                <div className="title-page-footer">
+                  Transcribed with semantic markup, high-contrast figures, and vector MathJax rendering.
+                </div>
+              </div>
+            </div>
+          )}
+
            {layoutMode === 'continuous' ? (
              <div className={`space-y-0 ${containerMaxWidthClass} mx-auto`}>
                {results.map((r, i) => (

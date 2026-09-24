@@ -16,6 +16,7 @@ export type LayoutMode = 'paginated' | 'continuous';
 export type ThinkingLevelType = 'AUTO' | 'LOW' | 'HIGH' | 'NONE';
 export type MultiFileMode = 'combine' | 'separate';
 export type MathAnnotationStyle = 'clean-breakdown' | 'visual-underbraces';
+export type PageProcessingMode = 'page-by-page' | 'bundle-two';
 
 export interface Figure {
   id: string;
@@ -87,6 +88,7 @@ export interface AppState {
   selectedModel: ModelType;
   selectedThinkingLevel: ThinkingLevelType;
   mathAnnotationStyle: MathAnnotationStyle;
+  pageProcessingMode: PageProcessingMode;
   currentProcessingImages?: string[] | null;
   actualModelUsed?: ModelType;
 }

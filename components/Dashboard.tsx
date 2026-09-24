@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ModelType, ThinkingLevelType, MultiFileMode, MathAnnotationStyle } from '../types';
+import { ModelType, ThinkingLevelType, MultiFileMode, MathAnnotationStyle, PageProcessingMode } from '../types';
 import CapybaraLogo from './CapybaraLogo';
 import { 
   Sparkles, 
@@ -31,6 +31,8 @@ interface DashboardProps {
   onThinkingLevelChange: (level: ThinkingLevelType) => void;
   mathAnnotationStyle: MathAnnotationStyle;
   onMathAnnotationStyleChange: (style: MathAnnotationStyle) => void;
+  pageProcessingMode: PageProcessingMode;
+  onPageProcessingModeChange: (mode: PageProcessingMode) => void;
   multiFileMode: MultiFileMode;
   onMultiFileModeChange: (mode: MultiFileMode) => void;
 }
@@ -45,6 +47,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onThinkingLevelChange,
   mathAnnotationStyle,
   onMathAnnotationStyleChange,
+  pageProcessingMode,
+  onPageProcessingModeChange,
   multiFileMode,
   onMultiFileModeChange
 }) => {
@@ -215,6 +219,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             <span className="text-zinc-600">{thinkingShortName}</span>
             <span className="text-zinc-400 font-normal">·</span>
             <span className="text-zinc-600">{mathAnnotationStyle === 'visual-underbraces' ? 'Underbraces' : 'Clean Math'}</span>
+            <span className="text-zinc-400 font-normal">·</span>
+            <span className="text-zinc-600">{pageProcessingMode === 'page-by-page' ? 'Page by page' : 'Bundle 2'}</span>
             <ChevronDown size={13} className={`text-zinc-500 transition-transform duration-200 ${isConfigOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -400,6 +406,62 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                     <span className="text-[10px] text-zinc-600 leading-tight">
                       Direct LaTeX \underbrace curly brackets positioned under symbols.
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Page Processing Mode */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider">
+                    Page Processing
+                  </label>
+                  <span className="text-[10px] text-indigo-600 font-semibold">
+                    {pageProcessingMode === 'page-by-page' ? 'Page by page' : 'Bundle two pages'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onPageProcessingModeChange('page-by-page')}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      pageProcessingMode === 'page-by-page'
+                        ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 ring-1 ring-indigo-600/30'
+                        : 'border-zinc-200 hover:border-zinc-300 text-zinc-700 bg-zinc-50/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
+                        <FileText size={13} className="text-indigo-600" />
+                        <span>Page by page</span>
+                      </div>
+                      {pageProcessingMode === 'page-by-page' && <Check size={13} className="text-indigo-700" />}
+                    </div>
+                    <span className="text-[10px] text-zinc-600 leading-tight">
+                      Processes 1 page at a time sequentially.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onPageProcessingModeChange('bundle-two')}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      pageProcessingMode === 'bundle-two'
+                        ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 ring-1 ring-indigo-600/30'
+                        : 'border-zinc-200 hover:border-zinc-300 text-zinc-700 bg-zinc-50/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
+                        <Layers size={13} className="text-indigo-600" />
+                        <span>Bundle two pages</span>
+                      </div>
+                      {pageProcessingMode === 'bundle-two' && <Check size={13} className="text-indigo-700" />}
+                    </div>
+                    <span className="text-[10px] text-zinc-600 leading-tight">
+                      Bundles two pages at the same time in each call.
                     </span>
                   </button>
                 </div>

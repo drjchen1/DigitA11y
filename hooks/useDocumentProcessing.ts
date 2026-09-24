@@ -1,10 +1,10 @@
 import React, { useCallback } from 'react';
-import { AppState, ConversionResult, ModelType, ThinkingLevelType, MathAnnotationStyle } from '../types';
+import { AppState, ConversionResult, ModelType, ThinkingLevelType, MathAnnotationStyle, PageProcessingMode } from '../types';
 import { pdfToImageData } from '../services/pdfService';
 import { convertBatchToHtml } from '../services/geminiService';
 import { runAccessibilityAudit, enrichHtmlAccessibility, computeSemanticAccessibilityTags } from '../utils/accessibility';
 import { cropImage } from '../utils/image';
-import { cleanAltText, fixHeadingOrder, replaceFigureInHtml, formatMathInText } from '../utils/dom';
+import { cleanAltText, fixHeadingOrder, replaceFigureInHtml, formatMathInText, formatFigureTitle, formatFigureCaption } from '../utils/dom';
 import { optimizeImageForGemini } from '../utils/imageOptimizer';
 
 const DYNAMIC_REASONING_STEPS = [
@@ -56,7 +56,8 @@ export const useDocumentProcessing = (
     files: File[], 
     model: ModelType = 'gemini-3.8-flash', 
     thinkingLevel: ThinkingLevelType = 'AUTO',
-    mathAnnotationStyle: MathAnnotationStyle = state.mathAnnotationStyle || 'clean-breakdown'
+    mathAnnotationStyle: MathAnnotationStyle = state.mathAnnotationStyle || 'clean-breakdown',
+    pageProcessingMode: PageProcessingMode = state.pageProcessingMode || 'page-by-page'
   ) => {
     if (!files || files.length === 0) return;
 
@@ -91,8 +92,9 @@ export const useDocumentProcessing = (
       
       setState(prev => ({ ...prev, progress: 10, statusMessage: 'Analyzing document structure...' }));
       
-      const BATCH_SIZE = 1;
-      const CONCURRENCY_LIMIT = 2;
+      const isPageByPage = pageProcessingMode === 'page-by-page';
+      const BATCH_SIZE = isPageByPage ? 1 : 2;
+      const CONCURRENCY_LIMIT = isPageByPage ? 1 : 1;
       const results: ConversionResult[] = new Array(totalPages);
       let completedPages = 0;
       
@@ -196,24 +198,25 @@ export const useDocumentProcessing = (
               const rawCaption = figResult.caption || "Figure";
               const formattedCaption = formatMathInText(rawCaption);
               const formattedTitle = formatMathInText(figResult.alt || "Figure");
+              const displayTitle = formatFigureTitle(formattedTitle);
+              const displayCaption = formatFigureCaption(formattedCaption);
 
               const figcaptionContent = rawCaption.length > 80 
-                ? `<figcaption class="p-4 w-full bg-zinc-50 border-t border-zinc-100 text-sm text-zinc-700 font-sans leading-relaxed">
+                ? `<figcaption class="p-3.5 sm:p-4 w-full bg-zinc-50 border-t border-zinc-100 text-sm text-zinc-700 font-sans leading-relaxed">
                     <details class="group/details cursor-pointer">
-                      <summary class="flex items-center justify-between font-bold text-xs tracking-wider text-zinc-600 select-none outline-none focus:text-indigo-900 focus:underline list-style-none [&::-webkit-details-marker]:hidden">
-                        <span>Figure: ${formattedTitle}</span>
-                        <span class="flex items-center gap-1.5 text-indigo-900 text-[10px] font-black uppercase tracking-widest bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md">
-                          Show Details
-                          <svg class="w-3.5 h-3.5 transition-transform duration-200 group-open/details:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                      <summary class="flex items-center justify-between gap-3 font-semibold text-xs text-zinc-700 select-none outline-none cursor-pointer hover:text-indigo-900 transition-colors list-style-none [&::-webkit-details-marker]:hidden">
+                        <span class="flex-1 min-w-0 pr-1 text-left leading-normal font-bold text-zinc-700">${displayTitle}</span>
+                        <span class="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-zinc-200/80 hover:bg-indigo-50 hover:text-indigo-600 border border-zinc-300/70 hover:border-indigo-300 text-zinc-600 transition-all shadow-2xs" title="Toggle extra figure details" aria-label="Toggle extra figure details">
+                          <svg class="w-3.5 h-3.5 transition-transform duration-200 figure-details-chevron group-open/details:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                         </span>
                       </summary>
                       <div class="mt-3 pt-3 border-t border-zinc-200/60 italic text-center text-zinc-600">
-                        ${formattedCaption}
+                        ${displayCaption}
                       </div>
                     </details>
                   </figcaption>`
-                : `<figcaption class="p-4 w-full bg-zinc-50 border-t border-zinc-100 text-sm text-zinc-700 font-sans text-center italic leading-relaxed">
-                    Figure: ${formattedCaption}
+                : `<figcaption class="p-3.5 sm:p-4 w-full bg-zinc-50 border-t border-zinc-100 text-sm text-zinc-700 font-sans text-center italic leading-relaxed">
+                    ${displayCaption}
                   </figcaption>`;
 
               const figureHtml = `
@@ -410,24 +413,25 @@ export const useDocumentProcessing = (
         const rawCaption = figResult.caption || "Figure";
         const formattedCaption = formatMathInText(rawCaption);
         const formattedTitle = formatMathInText(figResult.alt || "Figure");
+        const displayTitle = formatFigureTitle(formattedTitle);
+        const displayCaption = formatFigureCaption(formattedCaption);
 
         const figcaptionContent = rawCaption.length > 80 
-          ? `<figcaption class="p-4 w-full bg-zinc-50 border-t border-zinc-100 text-sm text-zinc-700 font-sans leading-relaxed">
+          ? `<figcaption class="p-3.5 sm:p-4 w-full bg-zinc-50 border-t border-zinc-100 text-sm text-zinc-700 font-sans leading-relaxed">
               <details class="group/details cursor-pointer">
-                <summary class="flex items-center justify-between font-bold text-xs tracking-wider text-zinc-600 select-none outline-none focus:text-indigo-900 focus:underline list-style-none [&::-webkit-details-marker]:hidden">
-                  <span>Figure: ${formattedTitle}</span>
-                  <span class="flex items-center gap-1.5 text-indigo-900 text-[10px] font-black uppercase tracking-widest bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md">
-                    Show Details
-                    <svg class="w-3.5 h-3.5 transition-transform duration-200 group-open/details:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                <summary class="flex items-center justify-between gap-3 font-semibold text-xs text-zinc-700 select-none outline-none cursor-pointer hover:text-indigo-900 transition-colors list-style-none [&::-webkit-details-marker]:hidden">
+                  <span class="flex-1 min-w-0 pr-1 text-left leading-normal font-bold text-zinc-700">${displayTitle}</span>
+                  <span class="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-zinc-200/80 hover:bg-indigo-50 hover:text-indigo-600 border border-zinc-300/70 hover:border-indigo-300 text-zinc-600 transition-all shadow-2xs" title="Toggle extra figure details" aria-label="Toggle extra figure details">
+                    <svg class="w-3.5 h-3.5 transition-transform duration-200 figure-details-chevron group-open/details:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                   </span>
                 </summary>
                 <div class="mt-3 pt-3 border-t border-zinc-200/60 italic text-center text-zinc-600">
-                  ${formattedCaption}
+                  ${displayCaption}
                 </div>
               </details>
             </figcaption>`
-          : `<figcaption class="p-4 w-full bg-zinc-50 border-t border-zinc-100 text-sm text-zinc-700 font-sans text-center italic leading-relaxed">
-              Figure: ${formattedCaption}
+          : `<figcaption class="p-3.5 sm:p-4 w-full bg-zinc-50 border-t border-zinc-100 text-sm text-zinc-700 font-sans text-center italic leading-relaxed">
+              ${displayCaption}
             </figcaption>`;
 
         const figureHtml = `

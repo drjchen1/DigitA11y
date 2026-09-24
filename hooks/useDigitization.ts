@@ -13,6 +13,7 @@ export const useDigitization = (onApiCall?: () => void) => {
     setModel,
     setThinkingLevel,
     setMathAnnotationStyle,
+    setPageProcessingMode,
     reset
   } = useDocumentState();
 
@@ -39,6 +40,7 @@ export const useDigitization = (onApiCall?: () => void) => {
     setModel,
     setThinkingLevel,
     setMathAnnotationStyle,
+    setPageProcessingMode,
     reset
   };
 };

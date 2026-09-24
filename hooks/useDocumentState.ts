@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { AppState, ModelType, ThinkingLevelType, MathAnnotationStyle } from '../types';
+import { AppState, ModelType, ThinkingLevelType, MathAnnotationStyle, PageProcessingMode } from '../types';
 
 export const useDocumentState = () => {
   const [state, setState] = useState<AppState>({
@@ -10,7 +10,8 @@ export const useDocumentState = () => {
     statusMessage: 'Waiting for upload...',
     selectedModel: 'gemini-3.8-flash',
     selectedThinkingLevel: 'AUTO',
-    mathAnnotationStyle: 'clean-breakdown'
+    mathAnnotationStyle: 'clean-breakdown',
+    pageProcessingMode: 'page-by-page'
   });
   
   const [originalFiles, setOriginalFiles] = useState<File[]>([]);
@@ -28,6 +29,10 @@ export const useDocumentState = () => {
     setState(prev => ({ ...prev, mathAnnotationStyle: style }));
   }, []);
 
+  const setPageProcessingMode = useCallback((mode: PageProcessingMode) => {
+    setState(prev => ({ ...prev, pageProcessingMode: mode }));
+  }, []);
+
   const reset = useCallback(() => {
     setState(prev => ({
       isProcessing: false,
@@ -38,6 +43,7 @@ export const useDocumentState = () => {
       selectedModel: prev.selectedModel,
       selectedThinkingLevel: prev.selectedThinkingLevel,
       mathAnnotationStyle: prev.mathAnnotationStyle,
+      pageProcessingMode: prev.pageProcessingMode,
       currentProcessingImages: null
     }));
     setOriginalFiles([]);
@@ -54,6 +60,7 @@ export const useDocumentState = () => {
     setModel,
     setThinkingLevel,
     setMathAnnotationStyle,
+    setPageProcessingMode,
     reset
   };
 };
